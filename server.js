@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const fetch = global.fetch || require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,7 +17,7 @@ class DrumVoiceAI {
     constructor() {
         this.apiKey = process.env.COHERE_API_KEY;
         this.provider = 'cohere';
-        
+
         // System prompt optimized for drummer commands
         this.systemPrompt = `You are a voice command parser for drummers. Parse natural language into JSON actions.
 
@@ -72,7 +73,7 @@ ONLY respond with valid JSON. No explanations.`;
 
             const data = await response.json();
             const aiResponse = data.text.trim();
-            
+
             // Try to parse JSON from AI response
             try {
                 return JSON.parse(aiResponse);
@@ -94,75 +95,60 @@ ONLY respond with valid JSON. No explanations.`;
 
 // Reliable regex fallback processor
 class PatternProcessor {
-    processCommand(command) {
-        const cmd = command.toLowerCase().trim();
-        
-        // METRONOME CONTROL
-        if (/\b(start|play|begin)\b.*\b(metronome|click)\b|\b(start|play)\b$/.test(cmd)) {
-            return { action: 'startMetronome' };
-        }
-        if (/\b(stop|pause|halt|end)\b/.test(cmd)) {
-            return { action: 'stopMetronome' };
-        }
+  processCommand(command) {
+    const cmd = command.toLowerCase().trim();
 
-        // BPM SETTING
-        const bpmMatch = cmd.match(/(\d{2,3})/);
-        if (bpmMatch && (/\b(bpm|tempo|beat)\b/.test(cmd) || cmd.length < 10)) {
-            return { action: 'setBpm', bpm: parseInt(bpmMatch[1]) };
-        }
-
-        // RELATIVE TEMPO CHANGES
-        if (/faster/i.test(cmd)) {
-            return { action: 'adjustBpm', change: 5 };
-        }
-        if (/slower/i.test(cmd)) {
-            return { action: 'adjustBpm', change: -5 };
-        }
-
-        // SUBDIVISIONS
-        if (/quarter/i.test(cmd)) return { action: 'setSubdivision', subdivision: 'quarter' };
-        if (/eighth/i.test(cmd)) return { action: 'setSubdivision', subdivision: 'eighth' };
-        if (/triplet/i.test(cmd)) return { action: 'setSubdivision', subdivision: 'triplet' };
-        if (/sixteenth/i.test(cmd)) return { action: 'setSubdivision', subdivision: 'sixteenth' };
-
-        // PAGE NAVIGATION
-        if (/next.*page/i.test(cmd) || /page.*next/i.test(cmd)) {
-            return { action: 'nextPage' };
-        }
-        if (/previous.*page/i.test(cmd) || /page.*previous/i.test(cmd) || /back/i.test(cmd)) {
-            return { action: 'previousPage' };
-        }
-        
-        // GO TO SPECIFIC PAGE
-        const pageMatch = cmd.match(/page\s*(\d+)/i);
-        if (pageMatch) {
-            return { action: 'goToPage', page: parseInt(pageMatch[1]) };
-        }
-
-        // SCHEDULED PAGE TURNS
-        const scheduleMatch = cmd.match(/flip.*?(\d+).*?bar/i);
-        if (scheduleMatch) {
-            return { action: 'schedulePageTurn', bars: parseInt(scheduleMatch[1]) };
-        }
-
-        return { action: 'unknown', command: command };
+    // METRONOME
+    if (/\b(start|play|begin)\b.*\b(metronome|click)\b|\b(start|play)\b$/.test(cmd)) {
+      return { action: 'startMetronome' };
     }
-}: parseInt(pageMatch[1]) };
-        }
-
-        // SCHEDULED PAGE TURNS
-        const scheduleMatch = cmd.match(/\b(?:flip|turn|page).*?(?:every|each)\s*(\d+)\s*(?:bars?|measures?)\b/);
-        if (scheduleMatch) {
-            return { action: 'schedulePageTurn', bars: parseInt(scheduleMatch[1]) };
-        }
-
-        // TAP TEMPO
-        if (/\btap\b/.test(cmd)) {
-            return { action: 'tap' };
-        }
-
-        return { action: 'unknown', command: command };
+    if (/\b(stop|pause|halt|end)\b/.test(cmd)) {
+      return { action: 'stopMetronome' };
     }
+
+    // BPM (numbers alone or with keywords)
+    const bpmMatch = cmd.match(/(\d{2,3})/);
+    if (bpmMatch && (/\b(bpm|tempo|beat)\b/.test(cmd) || cmd.length < 10)) {
+      return { action: 'setBpm', bpm: parseInt(bpmMatch[1], 10) };
+    }
+
+    // Relative tempo
+    if (/\bfaster\b/.test(cmd))  return { action: 'adjustBpm', change: 5 };
+    if (/\bslower\b/.test(cmd))  return { action: 'adjustBpm', change: -5 };
+
+    // Subdivisions
+    if (/quarter/.test(cmd))    return { action: 'setSubdivision', subdivision: 'quarter' };
+    if (/eighth/.test(cmd))     return { action: 'setSubdivision', subdivision: 'eighth' };
+    if (/triplet/.test(cmd))    return { action: 'setSubdivision', subdivision: 'triplet' };
+    if (/sixteenth/.test(cmd))  return { action: 'setSubdivision', subdivision: 'sixteenth' };
+
+    // Pages
+    if (/next.*page/.test(cmd) || /page.*next/.test(cmd)) {
+      return { action: 'nextPage' };
+    }
+    if (/previous.*page/.test(cmd) || /page.*previous/.test(cmd) || /\bback\b/.test(cmd)) {
+      return { action: 'previousPage' };
+    }
+
+    // Go to page N
+    const pageMatch = cmd.match(/page\s*(\d+)/);
+    if (pageMatch) {
+      return { action: 'goToPage', page: parseInt(pageMatch[1], 10) };
+    }
+
+    // Flip every N bars/measures
+    const scheduleMatch = cmd.match(/\b(?:flip|turn|page).*?(?:every|each)\s*(\d+)\s*(?:bars?|measures?)\b/);
+    if (scheduleMatch) {
+      return { action: 'schedulePageTurn', bars: parseInt(scheduleMatch[1], 10) };
+    }
+
+    // Tap tempo
+    if (/\btap\b/.test(cmd)) {
+      return { action: 'tap' };
+    }
+
+    return { action: 'unknown', command };
+  }
 }
 
 // Initialize processors
@@ -172,34 +158,34 @@ const patternProcessor = new PatternProcessor();
 // Main API endpoint
 app.post('/api/process-command', async (req, res) => {
     const { command } = req.body;
-    
+
     if (!command || typeof command !== 'string') {
-        return res.status(400).json({ 
+        return res.status(400).json({
             error: 'Valid command string required',
             provider: 'error'
         });
     }
-    
+
     console.log(`Processing: "${command}"`);
-    
+
     try {
         // Try AI processing first
         const aiResult = await aiProcessor.processCommand(command);
         console.log('AI result:', aiResult);
-        
-        res.json({ 
-            ...aiResult, 
+
+        res.json({
+            ...aiResult,
             provider: 'cohere',
             confidence: 'high'
         });
-        
+
     } catch (error) {
         console.log('AI failed, using patterns:', error.message);
-        
+
         // Fallback to pattern matching
         const patternResult = patternProcessor.processCommand(command);
         console.log('Pattern result:', patternResult);
-        
+
         res.json({
             ...patternResult,
             provider: 'regex',
@@ -222,18 +208,18 @@ app.get('/api/health', (req, res) => {
 // Test endpoint for debugging
 app.post('/api/test', async (req, res) => {
     const { command } = req.body;
-    
+
     let aiResult = null;
     let aiError = null;
-    
+
     try {
         aiResult = await aiProcessor.processCommand(command);
     } catch (error) {
         aiError = error.message;
     }
-    
+
     const patternResult = patternProcessor.processCommand(command);
-    
+
     res.json({
         command,
         ai: {
