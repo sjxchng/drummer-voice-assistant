@@ -1,16 +1,37 @@
-// server.js - Simple, reliable backend for DrumVoice
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
-const fetch = global.fetch || require('node-fetch');
+// server.js - Backend for DrumVoice
+//
+// This file implements a small Express server that exposes a few API endpoints
+// used by the front-end in `public/`. The primary responsibility is to accept
+// natural-language voice commands from the UI, try to parse them with an AI
+// provider (Cohere), and fall back to a deterministic regex-based parser when
+// the AI is unavailable or returns non-JSON.
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// Environment variables:
+const express = require('express'); // Express web server framework
+const cors = require('cors'); // Enable CORS for all routes (Cross-Origin Resource Sharing allows frontend JS to call backend APIs)
+const path = require('path'); // Utilities for handling and transforming file paths
+require('dotenv').config(); // Load environment variables from .env file
+const fetch = global.fetch || require('node-fetch'); // Fetch API for making HTTP requests (node-fetch for Node.js)
+const pkg = require('./package.json'); // used for metadata in /api/info
 
+const app = express(); // Create Express application
+const PORT = process.env.PORT || 3000; // Port to listen on (default 3000)
+
+// Record the time the server started so /api/info can report uptime/start
+const serverStart = new Date(); // Timestamp when server started
+
+// Basic middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Simple request logger: prints method, path, and body size / params.
+app.use((req, res, next) => {
+    const now = new Date().toISOString();
+    const bodySummary = req.body && Object.keys(req.body).length ? JSON.stringify(req.body) : '';
+    console.log(`[${now}] ${req.method} ${req.path} ${bodySummary}`);
+    next();
+});
 
 // Simple AI processor using Cohere
 class DrumVoiceAI {
@@ -93,62 +114,177 @@ ONLY respond with valid JSON. No explanations.`;
     }
 }
 
-// Reliable regex fallback processor
+// Reliable regex fallback processor (improved)
+// Includes normalization helpers, small word->number conversion, BPM clamping,
+// extended subdivision recognition, and relative numeric adjustments.
+
+// Basic normalization: lower-case, remove punctuation (keep hyphens and digits),
+// collapse spaces, and convert ordinals like "3rd" -> "3".
+function normalizeText(input) {
+    if (!input || typeof input !== 'string') return '';
+    let s = input.toLowerCase();
+    // Convert ordinal suffixes 1st/2nd/3rd/4th -> 1/2/3/4
+    s = s.replace(/(\d+)(st|nd|rd|th)\b/g, '$1');
+    // Keep letters, numbers, hyphens and spaces; convert other punctuation to space
+    s = s.replace(/[^\w\d\-\s]/g, ' ');
+    s = s.replace(/\s+/g, ' ').trim();
+    return s;
+}
+
+// Small word->number for common words (1..99) - enough for pages/bars and small adjustments
+const WORD_NUMBER_MAP = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10,
+    eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19,
+    twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90
+};
+
+function wordToNumber(token) {
+    if (!token || typeof token !== 'string') return null;
+    token = token.replace(/\-/g, ' ').trim();
+    // try direct map
+    if (WORD_NUMBER_MAP.hasOwnProperty(token)) return WORD_NUMBER_MAP[token];
+    // handle compounds like 'twenty one'
+    const parts = token.split(/\s+/).map(p=>p.trim()).filter(Boolean);
+    if (parts.length === 2 && WORD_NUMBER_MAP.hasOwnProperty(parts[0]) && WORD_NUMBER_MAP.hasOwnProperty(parts[1])) {
+        return WORD_NUMBER_MAP[parts[0]] + WORD_NUMBER_MAP[parts[1]];
+    }
+    return null;
+}
+
+function parseNumberToken(token) {
+    if (!token) return null;
+    token = token.trim();
+    if (/^\d+$/.test(token)) return parseInt(token, 10);
+    // If phrase contains spaces ("one hundred twenty"), try phrase parsing
+    if (/\s+/.test(token)) {
+        const p = parseNumberPhrase(token);
+        if (p !== null) return p;
+    }
+    const w = wordToNumber(token);
+    return w !== null ? w : null;
+}
+
+// Parse multi-word number phrases like "one hundred twenty" (supports up to thousands)
+function parseNumberPhrase(phrase) {
+    if (!phrase || typeof phrase !== 'string') return null;
+    const toks = phrase.toLowerCase().replace(/\-/g, ' ').split(/\s+/).filter(Boolean);
+    let total = 0;
+    let current = 0;
+    for (const t of toks) {
+        if (t === 'and') continue; // ignore filler
+        if (WORD_NUMBER_MAP.hasOwnProperty(t)) {
+            current += WORD_NUMBER_MAP[t];
+            continue;
+        }
+        if (t === 'hundred') {
+            current = (current || 1) * 100;
+            continue;
+        }
+        if (t === 'thousand') {
+            current = (current || 1) * 1000;
+            total += current;
+            current = 0;
+            continue;
+        }
+        if (/^\d+$/.test(t)) {
+            current += parseInt(t, 10);
+            continue;
+        }
+        // unknown token - bail
+        return null;
+    }
+    total += current;
+    return total || null;
+}
+
+function clampBpm(n) {
+    if (typeof n !== 'number' || Number.isNaN(n)) return null;
+    const min = 40; // allow low tempos (drum practice) but clamp extremes
+    const max = 300;
+    return Math.max(min, Math.min(max, Math.round(n)));
+}
+
 class PatternProcessor {
-  processCommand(command) {
-    const cmd = command.toLowerCase().trim();
+    processCommand(command) {
+        const raw = (command || '').toString();
+        const cmd = normalizeText(raw);
 
-    // METRONOME
-    if (/\b(start|play|begin)\b.*\b(metronome|click)\b|\b(start|play)\b$/.test(cmd)) {
-      return { action: 'startMetronome' };
+        // METRONOME - start
+        if (/(?:\b(start|play|begin)\b.*\b(metronome|click)\b)/.test(cmd) || /\b(start|play)\b$/.test(cmd)) {
+            return { action: 'startMetronome' };
+        }
+        // METRONOME - stop
+        if (/\b(stop|pause|halt|end)\b/.test(cmd)) {
+            return { action: 'stopMetronome' };
+        }
+
+        // BPM - explicit ("tempo 120", "bpm 120", "set tempo to 120", or words)
+            // Capture possibly multi-word numeric phrases after 'tempo' (e.g. 'set tempo to one hundred twenty')
+            const explicitBpm = cmd.match(/(?:\b(?:set\s+)?(?:tempo|bpm|beat)\b(?:\s*(?:to|is|at))?\s*)([\w\-\s]{1,40})/);
+        if (explicitBpm && explicitBpm[1]) {
+                const candidate = explicitBpm[1].trim();
+                const n = parseNumberToken(candidate) ?? parseNumberPhrase(candidate);
+            const bpm = clampBpm(n);
+            if (bpm) return { action: 'setBpm', bpm };
+        }
+
+        // BPM - bare numeric short commands like "120"
+        const bareNum = cmd.match(/\b(\d{2,3})\b/);
+        if (bareNum && cmd.length < 10) {
+            const bpm = clampBpm(parseInt(bareNum[1], 10));
+            if (bpm) return { action: 'setBpm', bpm };
+        }
+
+        // Relative tempo with numeric amount: "faster by 10", "increase tempo by 5"
+        const increaseMatch = cmd.match(/(?:faster|increase|speed\s+up|up)\s*(?:by\s*)?([\w\-]+)/);
+        if (increaseMatch && increaseMatch[1]) {
+            const val = parseNumberToken(increaseMatch[1]) ?? 5;
+            return { action: 'adjustBpm', change: Math.round(val) };
+        }
+        const decreaseMatch = cmd.match(/(?:slower|decrease|slow\s+down|down|reduce)\s*(?:by\s*)?([\w\-]+)/);
+        if (decreaseMatch && decreaseMatch[1]) {
+            const val = parseNumberToken(decreaseMatch[1]) ?? 5;
+            return { action: 'adjustBpm', change: -Math.round(val) };
+        }
+        // Simple faster/slower without number -> +/-5
+        if (/\bfaster\b/.test(cmd)) return { action: 'adjustBpm', change: 5 };
+        if (/\bslower\b/.test(cmd)) return { action: 'adjustBpm', change: -5 };
+
+        // Subdivisions: support numeric abbreviations like 8th/16th, words and plurals, and numeric tokens followed by 'note(s)'
+        if (/\b(?:8th|eighths?|8ths?)\b/.test(cmd) || (/\b8\b/.test(cmd) && /\bnotes?\b/.test(cmd))) return { action: 'setSubdivision', subdivision: 'eighth' };
+        if (/\b(?:16th|sixteenths?|16ths?)\b/.test(cmd) || (/\b16\b/.test(cmd) && /\bnotes?\b/.test(cmd))) return { action: 'setSubdivision', subdivision: 'sixteenth' };
+        if (/\bquarter\b/.test(cmd)) return { action: 'setSubdivision', subdivision: 'quarter' };
+        if (/\btriplet\b/.test(cmd)) return { action: 'setSubdivision', subdivision: 'triplet' };
+
+        // Pages: next / previous
+        if (/next.*page/.test(cmd) || /page.*next/.test(cmd)) {
+            return { action: 'nextPage' };
+        }
+        if (/previous.*page/.test(cmd) || /page.*previous/.test(cmd) || /\bback\b/.test(cmd)) {
+            return { action: 'previousPage' };
+        }
+
+        // Go to page N (accept digits or words)
+        const pageMatch = cmd.match(/page\s*([\w\-]+)/);
+        if (pageMatch && pageMatch[1]) {
+            const pageNum = parseNumberToken(pageMatch[1]);
+            if (pageNum) return { action: 'goToPage', page: pageNum };
+        }
+
+        // Flip every N bars/measures - accept word numbers too
+        const scheduleMatch = cmd.match(/(?:flip|turn|page).*?(?:every|each)\s*([\w\-]+)\s*(?:bars?|measures?)/);
+        if (scheduleMatch && scheduleMatch[1]) {
+            const bars = parseNumberToken(scheduleMatch[1]);
+            if (bars) return { action: 'schedulePageTurn', bars };
+        }
+
+        // Tap tempo
+        if (/\btap\b/.test(cmd)) {
+            return { action: 'tap' };
+        }
+
+        return { action: 'unknown', command: raw };
     }
-    if (/\b(stop|pause|halt|end)\b/.test(cmd)) {
-      return { action: 'stopMetronome' };
-    }
-
-    // BPM (numbers alone or with keywords)
-    const bpmMatch = cmd.match(/(\d{2,3})/);
-    if (bpmMatch && (/\b(bpm|tempo|beat)\b/.test(cmd) || cmd.length < 10)) {
-      return { action: 'setBpm', bpm: parseInt(bpmMatch[1], 10) };
-    }
-
-    // Relative tempo
-    if (/\bfaster\b/.test(cmd))  return { action: 'adjustBpm', change: 5 };
-    if (/\bslower\b/.test(cmd))  return { action: 'adjustBpm', change: -5 };
-
-    // Subdivisions
-    if (/quarter/.test(cmd))    return { action: 'setSubdivision', subdivision: 'quarter' };
-    if (/eighth/.test(cmd))     return { action: 'setSubdivision', subdivision: 'eighth' };
-    if (/triplet/.test(cmd))    return { action: 'setSubdivision', subdivision: 'triplet' };
-    if (/sixteenth/.test(cmd))  return { action: 'setSubdivision', subdivision: 'sixteenth' };
-
-    // Pages
-    if (/next.*page/.test(cmd) || /page.*next/.test(cmd)) {
-      return { action: 'nextPage' };
-    }
-    if (/previous.*page/.test(cmd) || /page.*previous/.test(cmd) || /\bback\b/.test(cmd)) {
-      return { action: 'previousPage' };
-    }
-
-    // Go to page N
-    const pageMatch = cmd.match(/page\s*(\d+)/);
-    if (pageMatch) {
-      return { action: 'goToPage', page: parseInt(pageMatch[1], 10) };
-    }
-
-    // Flip every N bars/measures
-    const scheduleMatch = cmd.match(/\b(?:flip|turn|page).*?(?:every|each)\s*(\d+)\s*(?:bars?|measures?)\b/);
-    if (scheduleMatch) {
-      return { action: 'schedulePageTurn', bars: parseInt(scheduleMatch[1], 10) };
-    }
-
-    // Tap tempo
-    if (/\btap\b/.test(cmd)) {
-      return { action: 'tap' };
-    }
-
-    return { action: 'unknown', command };
-  }
 }
 
 // Initialize processors
@@ -231,6 +367,29 @@ app.post('/api/test', async (req, res) => {
     });
 });
 
+// Informational endpoint: returns metadata useful for debugging and explanation
+app.get('/api/info', (req, res) => {
+    res.json({
+        name: pkg.name || 'drumvoice',
+        version: pkg.version || '0.0.0',
+        description: pkg.description || '',
+        dependencies: pkg.dependencies || {},
+        scripts: pkg.scripts || {},
+        routes: [
+            { method: 'GET', path: '/' },
+            { method: 'POST', path: '/api/process-command' },
+            { method: 'POST', path: '/api/test' },
+            { method: 'GET', path: '/api/health' },
+            { method: 'GET', path: '/api/info' }
+        ],
+        provider: aiProcessor.provider,
+        hasCohereKey: !!aiProcessor.apiKey,
+        startTime: serverStart.toISOString(),
+        uptimeSeconds: Math.floor(process.uptime()),
+        nodeVersion: process.version
+    });
+});
+
 // Serve frontend
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -248,8 +407,10 @@ app.use((error, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
     console.log(`🥁 DrumVoice Server running on port ${PORT}`);
-    console.log(`📡 AI Provider: ${aiProcessor.provider}`);
-    console.log(`🔑 API Key configured: ${!!aiProcessor.apiKey}`);
+    console.log(`� Package: ${pkg.name}@${pkg.version} (${pkg.description || 'no description'})`);
+    console.log(`�📡 AI Provider: ${aiProcessor.provider}`);
+    console.log(`🔑 Cohere API Key configured: ${!!aiProcessor.apiKey}`);
+    console.log(`⏱ Server start: ${serverStart.toISOString()}`);
     console.log(`🌐 Frontend: http://localhost:${PORT}`);
     console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/test`);
 });
