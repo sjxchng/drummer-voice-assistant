@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -138,9 +139,17 @@
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
         }
 
         .voice-status {
@@ -237,7 +246,7 @@
             margin: 20px 0;
             flex-wrap: wrap;
         }
-        
+
         .control-btn {
             padding: 12px 24px;
             border: none;
@@ -258,12 +267,15 @@
             transform: translateY(-1px);
         }
 
+
         .control-btn.active {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
             border-color: #3b82f6;
             color: white;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
+
+        .voice-commands-help {
             background: rgba(15, 20, 25, 0.6);
             padding: 20px;
             border-radius: 10px;
@@ -522,7 +534,7 @@
                     <div class="beat-indicator" id="beatIndicator"></div>
                     <div class="subdivision-display" id="subdivisionDisplay">Eighth Notes</div>
                 </div>
-                
+
                 <div class="controls">
                     <button class="control-btn" id="playBtn">▶️ Start</button>
                     <button class="control-btn" id="stopBtn">⏹️ Stop</button>
@@ -613,23 +625,23 @@
                 this.metronomeInterval = null;
                 this.beatsPerBar = 4;
                 this.logicalTick = 0;
-                
+
                 // PDF state
                 this.currentPage = 1;
                 this.totalPages = 1;
                 this.pdfDocument = null;
                 this.pageSchedule = null;
-                
+
                 // Tap tempo
                 this.tapTimes = [];
-                
+
                 // Voice recognition
                 this.isListening = false;
                 this.recognition = null;
-                
+
                 // Audio context for metronome sound
                 this.audioCtx = null;
-                
+
                 this.initializeElements();
                 this.setupEventListeners();
                 this.setupVoiceRecognition();
@@ -650,7 +662,7 @@
                 this.voiceStatusTextEl = document.getElementById('voiceStatusText');
                 this.playBtn = document.getElementById('playBtn');
                 this.stopBtn = document.getElementById('stopBtn');
-                
+
                 // Tap tempo elements
                 this.tapIndicator = document.getElementById('tapIndicator');
                 this.tapCount = document.getElementById('tapCount');
@@ -665,7 +677,7 @@
                 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SR) {
                     this.logMessage('Error', 'Voice recognition not supported - use Chrome or Edge browser');
-                    this.voiceStatusEl.textContent = 'Voice not supported - use Chrome or Edge';
+                    this.voiceStatusTextEl.textContent = 'Voice not supported - use Chrome or Edge';
                     return;
                 }
 
@@ -699,7 +711,7 @@
                     if (this.isListening && ['no-speech', 'network', 'aborted'].includes(event.error)) {
                         setTimeout(() => {
                             if (this.isListening) {
-                                try { this.recognition.start(); } catch (e) {}
+                                try { this.recognition.start(); } catch (e) { }
                             }
                         }, 1000);
                     }
@@ -707,13 +719,13 @@
 
                 this.recognition.onend = () => {
                     if (this.isListening) {
-                        try { 
-                            this.recognition.start(); 
+                        try {
+                            this.recognition.start();
                         } catch (e) {
                             this.logMessage('Voice Error', 'Recognition restarting...');
                             setTimeout(() => {
                                 if (this.isListening) {
-                                    try { this.recognition.start(); } catch (e) {}
+                                    try { this.recognition.start(); } catch (e) { }
                                 }
                             }, 1000);
                         }
@@ -729,11 +741,11 @@
                 this.micButton.addEventListener('click', () => {
                     if (this.isListening) {
                         this.isListening = false;
-                        try { this.recognition.stop(); } catch (e) {}
+                        try { this.recognition.stop(); } catch (e) { }
                     } else {
                         this.isListening = true;
-                        try { 
-                            this.recognition.start(); 
+                        try {
+                            this.recognition.start();
                         } catch (e) {
                             this.logMessage('Voice Error', 'Could not start voice recognition');
                             this.isListening = false;
@@ -777,11 +789,11 @@
 
             normalizeIntent(result) {
                 if (!result || typeof result !== 'object') return { action: 'unknown' };
-                
+
                 // Handle different AI response formats
                 if (result.action) return result;
                 if (result.intent) return { action: result.intent, ...result.params };
-                
+
                 return { action: 'unknown' };
             }
 
@@ -834,7 +846,7 @@
                 if (/previous.*page/i.test(command) || /page.*previous/i.test(command) || /back/i.test(command)) {
                     return this.executeIntent({ action: 'previousPage' });
                 }
-                
+
                 // GO TO SPECIFIC PAGE
                 const pageMatch = command.match(/page\s*(\d+)/i);
                 if (pageMatch) {
@@ -912,11 +924,11 @@
                 this.subdivision = subdivision;
                 const names = {
                     'quarter': 'Quarter Notes',
-                    'eighth': 'Eighth Notes', 
+                    'eighth': 'Eighth Notes',
                     'triplet': 'Triplets',
                     'sixteenth': 'Sixteenth Notes'
                 };
-                
+
                 this.subdivisionDisplay.textContent = names[subdivision] || names.eighth;
 
                 if (this.isPlaying) {
@@ -959,53 +971,31 @@
             }
 
             // TAP TEMPO FUNCTIONALITY
+            // VOICE TAP TEMPO - single tap sets tempo immediately
             handleVoiceTap() {
                 const now = Date.now();
-                this.tapTimes.push(now);
-
-                // Keep only the last 8 taps
-                if (this.tapTimes.length > 8) {
-                    this.tapTimes.shift();
+                if (this.tapTimes.length === 0) {
+                    this.tapTimes.push(now);
+                    this.tapCount.textContent = 'Say "tap" again to set tempo';
+                    this.tapIndicator.textContent = '🎯 First tap recorded - say "tap" again';
+                    this.logMessage('Voice Tap', 'First tap recorded');
+                    return;
                 }
-
-                this.tapCount.textContent = `Taps: ${this.tapTimes.length}`;
-                this.tapIndicator.textContent = '🎯 Tap received!';
-
+                const lastTap = this.tapTimes[this.tapTimes.length - 1];
+                const interval = now - lastTap;
+                const calculatedBpm = Math.round(60000 / interval);
+                let newBpm = calculatedBpm;
+                if (newBpm < 60) newBpm = 60;
+                if (newBpm > 220) newBpm = 220;
+                this.setBpm(newBpm);
+                this.tapIndicator.textContent = `✅ Tempo set to ${newBpm} BPM from your timing!`;
+                this.tapCount.textContent = `Applied: ${newBpm} BPM`;
+                this.tapTimes = [];
                 setTimeout(() => {
-                    if (this.tapTimes.length >= 2) {
-                        this.tapIndicator.textContent = `Calculated BPM: ${this.calculateTapBpm()} - keep tapping or say something else`;
-                    } else {
-                        this.tapIndicator.textContent = 'Say "tap" again to calculate tempo';
-                    }
-                }, 1000);
-
-                // Calculate and potentially apply BPM
-                if (this.tapTimes.length >= 4) {
-                    const newBpm = this.calculateTapBpm();
-                    this.setBpm(newBpm);
-                    this.tapIndicator.textContent = `✅ Tempo set to ${newBpm} BPM!`;
-                    this.tapTimes = []; // Reset
-                }
-
-                this.logMessage('Voice Tap', `Tap ${this.tapTimes.length} received`);
-            }
-
-            calculateTapBpm() {
-                if (this.tapTimes.length < 2) return this.bpm;
-                
-                const intervals = [];
-                for (let i = 1; i < this.tapTimes.length; i++) {
-                    intervals.push(this.tapTimes[i] - this.tapTimes[i - 1]);
-                }
-                
-                const avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-                let calculatedBpm = Math.round(60000 / avgInterval);
-                
-                // Clamp to reasonable range
-                if (calculatedBpm < 60) calculatedBpm = 60;
-                if (calculatedBpm > 220) calculatedBpm = 220;
-                
-                return calculatedBpm;
+                    this.tapIndicator.textContent = 'Say "tap" to instantly set tempo from your timing';
+                    this.tapCount.textContent = 'Ready for voice tap';
+                }, 3000);
+                this.logMessage('Voice Tap Applied', `Set tempo to ${newBpm} BPM from voice timing`);
             }
 
             playBeat() {
@@ -1043,12 +1033,12 @@
                     try {
                         const AudioContext = window.AudioContext || window.webkitAudioContext;
                         this.audioCtx = new AudioContext();
-                        
+
                         // Resume audio context if suspended (required for some browsers)
                         if (this.audioCtx.state === 'suspended') {
                             this.audioCtx.resume();
                         }
-                        
+
                         this.logMessage('Audio System', 'Audio context initialized');
                     } catch (error) {
                         this.logMessage('Audio Error', 'Could not initialize audio system');
@@ -1068,28 +1058,28 @@
 
                 try {
                     const now = this.audioCtx.currentTime;
-                    
+
                     // Create oscillator for the click sound
                     const osc = this.audioCtx.createOscillator();
                     const gainNode = this.audioCtx.createGain();
-                    
+
                     // Connect audio nodes
                     osc.connect(gainNode);
                     gainNode.connect(this.audioCtx.destination);
-                    
+
                     // Configure sound
                     osc.type = 'sine';
                     osc.frequency.setValueAtTime(accent ? 1000 : 800, now);
-                    
+
                     // Volume envelope for click sound
                     gainNode.gain.setValueAtTime(0, now);
                     gainNode.gain.linearRampToValueAtTime(accent ? 0.3 : 0.2, now + 0.01);
                     gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-                    
+
                     // Play the sound
                     osc.start(now);
                     osc.stop(now + 0.1);
-                    
+
                 } catch (error) {
                     console.error('Audio playback error:', error);
                 }
@@ -1098,7 +1088,7 @@
             // VOICE TAP TEMPO - single tap sets tempo immediately
             handleVoiceTap() {
                 const now = Date.now();
-                
+
                 // If this is the first tap, just record it
                 if (this.tapTimes.length === 0) {
                     this.tapTimes.push(now);
@@ -1112,22 +1102,22 @@
                 const lastTap = this.tapTimes[this.tapTimes.length - 1];
                 const interval = now - lastTap;
                 const calculatedBpm = Math.round(60000 / interval);
-                
+
                 // Clamp to reasonable range
                 let newBpm = calculatedBpm;
                 if (newBpm < 60) newBpm = 60;
                 if (newBpm > 220) newBpm = 220;
-                
+
                 // Apply the tempo immediately
                 this.setBpm(newBpm);
-                
+
                 // Update display
                 this.tapIndicator.textContent = `✅ Tempo set to ${newBpm} BPM from your timing!`;
                 this.tapCount.textContent = `Applied: ${newBpm} BPM`;
-                
+
                 // Reset for next time
                 this.tapTimes = [];
-                
+
                 setTimeout(() => {
                     this.tapIndicator.textContent = 'Say "tap" to instantly set tempo from your timing';
                     this.tapCount.textContent = 'Ready for voice tap';
@@ -1316,7 +1306,7 @@
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
             window.drumAssistant = new VoiceOnlyDrumAssistant();
-            
+
             // Set up PDF file input handler
             document.getElementById('pdfInput').addEventListener('change', (event) => {
                 window.drumAssistant.loadPDF(event);
@@ -1331,4 +1321,5 @@
         });
     </script>
 </body>
+
 </html>

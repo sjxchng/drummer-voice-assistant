@@ -3,15 +3,25 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
-    "express": "^5.1.0"
-  }
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjxchng/drummer-voice-assistant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sjxchng/drummer-voice-assistant/issues"
+  },
+  "homepage": "https://github.com/sjxchng/drummer-voice-assistant#readme",
+  "description": ""
 }
