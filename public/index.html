@@ -329,6 +329,11 @@
             border: 1px solid rgba(255, 215, 0, 0.2);
             position: relative;
             min-height: 400px;
+
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
         }
 
         .pdf-upload-area {
@@ -576,6 +581,7 @@
                     </div>
                 </div>
                 <div class="pdf-viewer" id="pdfViewer">
+                    <div id="pdfContent"></div>
                     <div class="pdf-upload-area">
                         <div class="pdf-upload-icon">📄</div>
                         <div class="upload-instruction">Voice-Controlled Sheet Music</div>
@@ -587,7 +593,6 @@
                             📁 Choose PDF File
                         </button>
                         <input type="file" id="pdfInput" accept=".pdf" class="hidden-input">
-                        <div id="pdfContent"></div>
                     </div>
                 </div>
             </div>
