@@ -605,6 +605,38 @@
         <div id="consoleLog"></div>
     </div>
 
+        <!--
+            Notes (quick reference):
+            - This single-file frontend contains the UI and the client-side logic
+                (class VoiceOnlyDrumAssistant) that listens for voice commands, sends
+                them to the backend (`/api/process-command`), and falls back to local
+                regex parsing if the backend/AI is unavailable.
+
+            - High-level UI pieces:
+                * Left panel: voice controls, metronome display, tap-tempo hints
+                * Right panel: PDF viewer and upload area (uses pdf.js dynamically)
+                * Console section: shows a short, live log of voice processing events
+                * Status bar: shows AI and voice status and last command
+
+            - Data flow (simplified):
+                1. User clicks mic button -> starts Web Speech API recognition
+                2. Recognition result -> `processVoiceCommand(command)`
+                3. `sendToAIBackend(command)` attempts to use backend AI (/api/process-command)
+                     - on success: `normalizeIntent(result)` -> `executeIntent(intent)`
+                     - on failure: `processWithPatterns(command)` -> `executeIntent(intent)`
+
+            - Important DOM elements (by id):
+                * `micButton`, `voiceStatusText` — voice UI controls
+                * `bpmDisplay`, `beatIndicator`, `subdivisionDisplay` — metronome UI
+                * `pdfInput`, `pdfContent`, `currentPage`, `totalPages` — PDF UI
+                * `consoleLog` — live event log
+
+            - Where to look if something breaks:
+                * Browser console (voice API errors, audio context issues)
+                * Server logs (backend AI errors and /api endpoints)
+                * The live console in the UI (helpful event traces)
+        -->
+
     <div class="status-bar">
         <div class="status-indicator">
             <div class="status-dot" id="aiStatus"></div>
@@ -620,6 +652,19 @@
     </div>
 
     <script>
+        // VoiceOnlyDrumAssistant
+        // - Handles voice capture (Web Speech API), UI updates (metronome & PDF viewer),
+        //   and coordination between frontend parsing (regex) and backend AI.
+        // - Public properties (important):
+        //   * bpm, subdivision, isPlaying
+        //   * pdfDocument, currentPage, totalPages
+        //   * recognition (SpeechRecognition instance)
+        // - Key methods:
+        //   * setupVoiceRecognition() - initializes Web Speech API and microphone button
+        //   * processVoiceCommand(command) - top-level command handler
+        //   * sendToAIBackend(command) - POSTs to /api/process-command and returns parsed result
+        //   * processWithPatterns(command) - local fallback parser (server also has regex fallback)
+        //   * executeIntent(intent) - applies parsed actions to local UI/state
         class VoiceOnlyDrumAssistant {
             constructor() {
                 // Core state
@@ -678,6 +723,11 @@
                 this.stopBtn.addEventListener('click', () => this.stopMetronome());
             }
 
+            // setupVoiceRecognition()
+            // - Initializes the Web Speech API (SpeechRecognition).
+            // - Hooks recognition callbacks (.onstart, .onresult, .onerror, .onend)
+            // - Toggles `isListening` and updates `micButton` UI state.
+            // - Listens continuously to allow hands-free commands.
             setupVoiceRecognition() {
                 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SR) {
@@ -759,6 +809,10 @@
                 });
             }
 
+            // processVoiceCommand(command)
+            // - Top-level handler invoked when speech recognition returns a final transcript.
+            // - Tries AI backend first (async). If that fails, falls back to the local pattern matcher.
+            // - The resolved intent should be an object containing `action` and optional params.
             processVoiceCommand(command) {
                 // Try AI backend first
                 this.sendToAIBackend(command)
@@ -772,6 +826,9 @@
                     });
             }
 
+            // sendToAIBackend(command) -> Promise<object>
+            // - Posts the command to `/api/process-command` and returns parsed JSON from server.
+            // - On failure (network/500/etc) it throws so callers can fall back to local parsing.
             async sendToAIBackend(command) {
                 try {
                     const response = await fetch('/api/process-command', {
@@ -802,6 +859,10 @@
                 return { action: 'unknown' };
             }
 
+            // processWithPatterns(command)
+            // - Local, deterministic fallback used when the backend AI is unavailable.
+            // - Mirrors server-side PatternProcessor behavior but runs in-browser for lower latency.
+            // - If you update server-side regexes, consider keeping these in sync.
             processWithPatterns(command) {
                 this.logMessage('Pattern Matching', 'Processing voice command');
 
@@ -817,7 +878,8 @@
                 const bpmMatch = command.match(/(\d{2,3})/);
                 if (bpmMatch) {
                     const bpm = parseInt(bpmMatch[1]);
-                    if (bpm >= 60 && bpm <= 220) {
+                    // Client clamps safe range - mirror server clamp in UI range for consistency
+                    if (bpm >= 40 && bpm <= 300) {
                         return this.executeIntent({ action: 'setBpm', bpm: bpm });
                     }
                 }
@@ -834,13 +896,13 @@
                 if (/quarter/i.test(command)) {
                     return this.executeIntent({ action: 'setSubdivision', subdivision: 'quarter' });
                 }
-                if (/eighth/i.test(command)) {
+                if (/eighth/i.test(command) || /\b8th\b/i) {
                     return this.executeIntent({ action: 'setSubdivision', subdivision: 'eighth' });
                 }
                 if (/triplet/i.test(command)) {
                     return this.executeIntent({ action: 'setSubdivision', subdivision: 'triplet' });
                 }
-                if (/sixteenth/i.test(command)) {
+                if (/sixteenth/i.test(command) || /\b16th\b/i) {
                     return this.executeIntent({ action: 'setSubdivision', subdivision: 'sixteenth' });
                 }
 
@@ -872,6 +934,10 @@
                 this.logMessage('Unknown Command', 'Command not recognized');
             }
 
+            // executeIntent(intent)
+            // - Receives a normalized intent object (usually { action, ...params })
+            // - Applies the action to local state (metronome or PDF viewer)
+            // - The client expects these actions and keeps UI in sync with applied changes.
             executeIntent(intent) {
                 this.logMessage('Executing', JSON.stringify(intent));
 
@@ -910,6 +976,15 @@
             }
 
             // CORE METRONOME FUNCTIONS
+            // Metronome lifecycle:
+            // - setBpm(newBpm): adjust tempo, clamps to safe range and restarts metronome if playing.
+            // - setSubdivision(subdivision): change ticks-per-beat multiplier and restart if playing.
+            // - startMetronome(): calculates interval from bpm/subdivision and schedules tick via setInterval.
+            // - stopMetronome(): clears interval and resets UI indicators.
+            // Notes:
+            // - Ticks-per-bar are computed as beatsPerBar * multiplier (multiplier from subdivision)
+            // - For production, a more accurate clock (AudioContext scheduler or WebWorker) is recommended
+            //   to avoid setInterval jitter; setInterval is good enough for prototyping and voice-driven control.
             setBpm(newBpm) {
                 if (newBpm < 60) newBpm = 60;
                 if (newBpm > 220) newBpm = 220;
@@ -1034,6 +1109,11 @@
             }
 
             ensureAudioContext() {
+                // ensureAudioContext()
+                // - Lazily creates an AudioContext used for click sounds.
+                // - Many browsers require a user gesture before audio can play; the code attempts to
+                //   resume suspended contexts automatically.
+                // - If audio initialization fails, the metronome will still run visually but without sound.
                 if (!this.audioCtx) {
                     try {
                         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1132,6 +1212,13 @@
             }
 
             // PAGE NAVIGATION
+            // PDF handling & page navigation:
+            // - loadPDF(event): reads the File, loads pdf.js if necessary, and caches the PDFDocument.
+            // - renderPage(pageNumber): renders into an offscreen canvas and inserts it into #pdfContent.
+            // - nextPage()/previousPage()/goToPage(n): update `currentPage` and call renderPage.
+            // Notes:
+            // - Uses pdf.js CDN for simplicity; consider bundling a pinned pdf.js version for offline use.
+            // - Rendering uses a scale factor (2.0) for high-res images; adjust for performance on low-end devices.
             schedulePageTurn(bars) {
                 this.pageSchedule = { bars };
                 this.logMessage('Page Schedule', `Will auto-turn every ${bars} bars`);
