@@ -223,6 +223,55 @@
             border: 1px solid rgba(255, 215, 0, 0.1);
         }
 
+        .timer-section {
+            text-align: center;
+            background: rgba(15, 20, 25, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.1);
+        }
+
+        .timer-display {
+            background: rgba(15, 20, 25, 0.8);
+            padding: 24px;
+            border-radius: 15px;
+            margin: 16px 0;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .time-display {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .time-subtext {
+            font-size: 0.95em;
+            color: #94a3b8;
+        }
+
+        .timer-inputs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .timer-text {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            background: rgba(30, 41, 59, 0.7);
+            color: #e2e8f0;
+            font-size: 0.95em;
+            min-width: 160px;
+        }
+
         .tap-indicator {
             font-size: 1.2em;
             margin: 12px 0;
@@ -553,6 +602,25 @@
                 <div class="tap-count" id="tapCount">Ready for voice tap</div>
             </div>
 
+            <!-- Timer -->
+            <div class="timer-section">
+                <h3 class="section-title" style="font-size: 1.1em;">Practice Timer</h3>
+                <div class="timer-display">
+                    <div class="time-display" id="timeDisplay">00:00</div>
+                    <div class="time-subtext" id="timeSubtext">Say "set timer for 2 minutes"</div>
+                </div>
+                <div class="controls">
+                    <button class="control-btn" id="timerStartBtn">▶️ Start</button>
+                    <button class="control-btn" id="timerPauseBtn">⏸️ Pause</button>
+                    <button class="control-btn" id="timerResumeBtn">⏯️ Resume</button>
+                    <button class="control-btn" id="timerCancelBtn">⏹️ Cancel</button>
+                </div>
+                <div class="timer-inputs">
+                    <input class="timer-text" id="timerQuickInput" placeholder="e.g., 2:00 or 90s" />
+                    <button class="control-btn" id="timerSetBtn">Set</button>
+                </div>
+            </div>
+
             <!-- Voice Commands Help -->
             <div class="voice-commands-help">
                 <h3 class="section-title" style="font-size: 1.1em;">Voice Commands</h3>
@@ -605,7 +673,7 @@
         <div id="consoleLog"></div>
     </div>
 
-        <!--
+    <!--
             Notes (quick reference):
             - This single-file frontend contains the UI and the client-side logic
                 (class VoiceOnlyDrumAssistant) that listens for voice commands, sends
@@ -685,6 +753,21 @@
                 // Tap tempo
                 this.tapTimes = [];
 
+                // Timer state
+                this.timerDurationMs = 0;      // total duration set
+                this.timerRemainingMs = 0;     // remaining at any moment
+                this.timerEndAt = null;        // Date.now() when it should end (if running)
+                this.timerIntervalId = null;   // interval handle
+                this.timerRunning = false;     // whether countdown is active
+                this.timerPaused = false;      // whether paused
+
+                // Stopwatch state (optional if you want count-up practice tracking now)
+                this.swStartAt = null;
+                this.swElapsedMs = 0;
+                this.swIntervalId = null;
+                this.swRunning = false;
+                this.swPaused = false;
+
                 // Voice recognition
                 this.isListening = false;
                 this.recognition = null;
@@ -716,12 +799,48 @@
                 // Tap tempo elements
                 this.tapIndicator = document.getElementById('tapIndicator');
                 this.tapCount = document.getElementById('tapCount');
+
+                // Timer elements
+                this.timeDisplayEl = document.getElementById('timeDisplay');
+                this.timeSubtextEl = document.getElementById('timeSubtext');
+                // Debug element to show last matched intent/pattern (created if missing)
+                this.debugIntentEl = document.getElementById('debugIntent');
+                if (!this.debugIntentEl) {
+                    this.debugIntentEl = document.createElement('div');
+                    this.debugIntentEl.id = 'debugIntent';
+                    this.debugIntentEl.style.fontSize = '0.8em';
+                    this.debugIntentEl.style.color = '#666';
+                    this.timeSubtextEl.parentNode.appendChild(this.debugIntentEl);
+                }
+                this.timerStartBtn = document.getElementById('timerStartBtn');
+                this.timerPauseBtn = document.getElementById('timerPauseBtn');
+                this.timerResumeBtn = document.getElementById('timerResumeBtn');
+                this.timerCancelBtn = document.getElementById('timerCancelBtn');
+                this.timerQuickInput = document.getElementById('timerQuickInput');
+                this.timerSetBtn = document.getElementById('timerSetBtn');
             }
 
             setupEventListeners() {
                 this.playBtn.addEventListener('click', () => this.startMetronome());
                 this.stopBtn.addEventListener('click', () => this.stopMetronome());
+                // Timer controls (optional click helpers; voice also works)
+                this.timerSetBtn.addEventListener('click', () => {
+                    const text = (this.timerQuickInput.value || '').trim();
+                    const ms = this.parseDurationToMs(text);
+                    if (ms > 0) {
+                        this.setTimer(ms);
+                        this.logMessage('Timer Set', `Duration set to ${this.formatMs(ms)}`);
+                    } else {
+                        this.logMessage('Timer Error', 'Could not parse duration');
+                    }
+                });
+                this.timerStartBtn.addEventListener('click', () => this.startTimer());
+                this.timerPauseBtn.addEventListener('click', () => this.pauseTimer());
+                this.timerResumeBtn.addEventListener('click', () => this.resumeTimer());
+                this.timerCancelBtn.addEventListener('click', () => this.cancelTimer());
             }
+
+
 
             // setupVoiceRecognition()
             // - Initializes the Web Speech API (SpeechRecognition).
@@ -865,12 +984,16 @@
             // - If you update server-side regexes, consider keeping these in sync.
             processWithPatterns(command) {
                 this.logMessage('Pattern Matching', 'Processing voice command');
+                if (this.debugIntentEl) this.debugIntentEl.textContent = 'matching...';
 
                 // METRONOME CONTROL
-                if (/start/i.test(command)) {
-                    return this.executeIntent({ action: 'startMetronome' });
+                // Require an explicit target (metronome/click/beat) so generic commands
+                // like "start timer" don't accidentally trigger the metronome.
+                if (/(?:\b(start|begin)\b).*\b(metronome|click|beat)\b/i.test(command) || /\bstart\s+(metronome|click|beat)\b/i.test(command)) {
+                        if (this.debugIntentEl) this.debugIntentEl.textContent = JSON.stringify({ action: 'startMetronome' });
+                        return this.executeIntent({ action: 'startMetronome' });
                 }
-                if (/stop/i.test(command)) {
+                if (/(?:\b(stop|end|halt)\b).*\b(metronome|click|beat)\b/i.test(command) || /\bstop\s+(metronome|click|beat)\b/i.test(command)) {
                     return this.executeIntent({ action: 'stopMetronome' });
                 }
 
@@ -931,6 +1054,55 @@
                     return this.executeIntent({ action: 'tap' });
                 }
 
+                // TIMER: set duration (e.g., "set timer for 2 minutes 30 seconds", "set a 90 second timer")
+                const setTimerMatch = command.match(/set\s+(?:a\s+)?(?:timer|countdown)\s+(?:for\s+)?(.+)/i);
+                if (setTimerMatch) {
+                    const ms = this.parseDurationToMs(setTimerMatch[1]);
+                    if (ms > 0) {
+                        this.setTimer(ms);
+                        return this.executeIntent({ action: 'announce', text: `Timer set to ${this.formatMs(ms)}` });
+                    }
+                }
+
+                // TIMER basic controls
+                // Allow more natural phrases to start the timer. For single-word "start"/"go",
+                // only treat as timer start if a duration has already been set on the client.
+                    if (/(?:^(?:start|begin|go)\b).*?(?:timer|countdown)?/i.test(command) || /(?:start|begin)\s+(timer|countdown)/i.test(command) || /kick\s*off\s*(?:the\s*)?(?:timer|countdown)?/i.test(command)) {
+                        // Decide whether 'start'/'go' should mean timer or metronome.
+                        const mentionsTimer = /\b(timer|countdown)\b/i.test(command) || /kick\s*off/i.test(command);
+                        const singleWordStart = /^(?:start|go|begin)\s*$/i.test(command.trim());
+                        // If it explicitly mentions timer, or it's not a bare start and the client has a duration set, start timer.
+                        if (mentionsTimer || ((this.timerDurationMs && this.timerDurationMs > 0) && !singleWordStart)) {
+                            if (this.debugIntentEl) this.debugIntentEl.textContent = JSON.stringify({ action: 'startTimer' });
+                            return this.executeIntent({ action: 'startTimer' });
+                        }
+                        // If it's a bare 'start'/'go' and there's no timer configured, treat as metronome start.
+                        if (singleWordStart && !(this.timerDurationMs && this.timerDurationMs > 0)) {
+                            return this.executeIntent({ action: 'startMetronome' });
+                        }
+                    }
+                if (/pause\s+(timer|countdown)/i.test(command) || /pause timer/i.test(command)) {
+                    return this.executeIntent({ action: 'pauseTimer' });
+                }
+                if (/(resume|continue)\s+(timer|countdown)/i.test(command) || /resume timer/i.test(command)) {
+                    return this.executeIntent({ action: 'resumeTimer' });
+                }
+                if (/(cancel|stop|clear)\s+(timer|countdown)/i.test(command) || /cancel timer/i.test(command)) {
+                    return this.executeIntent({ action: 'cancelTimer' });
+                }
+                if (/how (much )?time (is )?left/i.test(command) || /time left/i.test(command)) {
+                    const left = this.timerRunning ? this.timerEndAt - Date.now() : this.timerRemainingMs;
+                    const msg = left > 0 ? `${this.formatMs(left)} remaining` : 'No active timer';
+                    this.timeSubtextEl.textContent = msg;
+                    return this.executeIntent({ action: 'announce', text: msg });
+                }
+
+                // STOPWATCH / PRACTICE TIMER (count-up)
+                if (/start\s+(stopwatch|practice)/i.test(command)) return this.executeIntent({ action: 'startStopwatch' });
+                if (/pause\s+(stopwatch|practice)/i.test(command)) return this.executeIntent({ action: 'pauseStopwatch' });
+                if (/(resume|continue)\s+(stopwatch|practice)/i.test(command)) return this.executeIntent({ action: 'resumeStopwatch' });
+                if (/(stop|end|finish)\s+(stopwatch|practice)/i.test(command)) return this.executeIntent({ action: 'stopStopwatch' });
+
                 this.logMessage('Unknown Command', 'Command not recognized');
             }
 
@@ -971,6 +1143,50 @@
                         break;
                     case 'tap':
                         this.handleVoiceTap();
+                        break;
+                    case 'startTimer':
+                        this.startTimer();
+                        break;
+                    case 'setTimer':
+                        // Server may return { action: 'setTimer', ms: NUMBER }
+                        if (typeof intent.ms === 'number') {
+                            this.setTimer(intent.ms);
+                            // Optionally start immediately if caller requested
+                            if (intent.start) this.startTimer();
+                        }
+                        break;
+                    case 'timeLeft':
+                        // Server asked client to report remaining time; announce current timer state
+                        const left = this.timerRunning ? this.timerEndAt - Date.now() : this.timerRemainingMs;
+                        const msg = left > 0 ? `${this.formatMs(left)} remaining` : 'No active timer';
+                        this.timeSubtextEl.textContent = msg;
+                        this.logMessage('Timer', `Reported time left: ${msg}`);
+                        break;
+                    case 'pauseTimer':
+                        this.pauseTimer();
+                        break;
+                    case 'resumeTimer':
+                        this.resumeTimer();
+                        break;
+                    case 'cancelTimer':
+                        this.cancelTimer();
+                        break;
+                    case 'announce':
+                        // no-op; UI updated by caller
+                        break;
+
+                    // (Only if you added stopwatch features right now)
+                    case 'startStopwatch':
+                        this.swStart();
+                        break;
+                    case 'pauseStopwatch':
+                        this.swPause();
+                        break;
+                    case 'resumeStopwatch':
+                        this.swResume();
+                        break;
+                    case 'stopStopwatch':
+                        this.swStop();
                         break;
                 }
             }
@@ -1168,6 +1384,147 @@
                 } catch (error) {
                     console.error('Audio playback error:', error);
                 }
+            }
+
+            // ===== TIMER IMPLEMENTATION =====
+            setTimer(ms) {
+                this.timerDurationMs = ms;
+                this.timerRemainingMs = ms;
+                this.timerPaused = false;
+                this.timerRunning = false;
+                this.timerEndAt = null;
+                this.updateTimerDisplay(ms);
+                this.timeSubtextEl.textContent = 'Timer ready. Say "start timer"';
+                this.logMessage('Timer', `Set duration ${this.formatMs(ms)} (${ms}ms)`);
+            }
+
+            startTimer() {
+                this.logMessage('Timer', `Start requested - durationMs=${this.timerDurationMs}, running=${this.timerRunning}, paused=${this.timerPaused}`);
+                if (this.timerDurationMs <= 0) {
+                    this.timeSubtextEl.textContent = 'Set a duration first (e.g., "set timer for 2 minutes")';
+                    return;
+                }
+                if (this.timerRunning && !this.timerPaused) return;
+
+                const now = Date.now();
+                if (this.timerPaused) {
+                    this.timerEndAt = now + this.timerRemainingMs;
+                } else {
+                    this.timerEndAt = now + this.timerDurationMs;
+                    this.timerRemainingMs = this.timerDurationMs;
+                }
+
+                this.timerRunning = true;
+                this.timerPaused = false;
+                this.timeSubtextEl.textContent = 'Timer running…';
+
+                clearInterval(this.timerIntervalId);
+                this.timerIntervalId = setInterval(() => this.timerTick(), 200);
+                this.logMessage('Timer', `Started: ${this.formatMs(this.timerRemainingMs)}`);
+            }
+
+            pauseTimer() {
+                if (!this.timerRunning || this.timerPaused) return;
+                this.timerPaused = true;
+                this.timerRunning = false;
+                clearInterval(this.timerIntervalId);
+                this.timerRemainingMs = Math.max(0, this.timerEndAt - Date.now());
+                this.timeSubtextEl.textContent = 'Timer paused';
+                this.logMessage('Timer', `Paused at ${this.formatMs(this.timerRemainingMs)}`);
+            }
+
+            resumeTimer() {
+                if (!this.timerPaused || this.timerRemainingMs <= 0) return;
+                this.timerPaused = false;
+                this.timerRunning = true;
+                this.timerEndAt = Date.now() + this.timerRemainingMs;
+                clearInterval(this.timerIntervalId);
+                this.timerIntervalId = setInterval(() => this.timerTick(), 200);
+                this.timeSubtextEl.textContent = 'Timer running…';
+                this.logMessage('Timer', 'Resumed');
+            }
+
+            cancelTimer() {
+                clearInterval(this.timerIntervalId);
+                this.timerIntervalId = null;
+                this.timerRunning = false;
+                this.timerPaused = false;
+                this.timerRemainingMs = 0;
+                this.timerEndAt = null;
+                this.updateTimerDisplay(0);
+                this.timeSubtextEl.textContent = 'Timer cancelled';
+                this.logMessage('Timer', 'Cancelled');
+            }
+
+            timerTick() {
+                const now = Date.now();
+                const remaining = Math.max(0, this.timerEndAt - now);
+                this.timerRemainingMs = remaining;
+                this.updateTimerDisplay(remaining);
+
+                if (remaining <= 0) {
+                    clearInterval(this.timerIntervalId);
+                    this.timerIntervalId = null;
+                    this.timerRunning = false;
+                    this.timerPaused = false;
+                    this.timeSubtextEl.textContent = '⏰ Time\'s up!';
+                    this.onTimerComplete();
+                    this.logMessage('Timer', "Completed");
+                }
+            }
+
+            onTimerComplete() {
+                // Play a short triple-accent for visibility
+                this.ensureAudioContext();
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => this.playClick(true), i * 180);
+                }
+            }
+
+            updateTimerDisplay(ms) {
+                this.timeDisplayEl.textContent = this.formatMs(ms);
+            }
+
+            formatMs(ms) {
+                const total = Math.round(ms / 1000);
+                const m = Math.floor(total / 60);
+                const s = total % 60;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            // Accepts inputs like "2:00", "90s", "2m 30s", "1 minute 15 seconds", "75"
+            parseDurationToMs(text) {
+                if (!text) return 0;
+                const t = text.trim().toLowerCase();
+
+                // mm:ss
+                const mmss = t.match(/^(\d{1,3}):(\d{1,2})$/);
+                if (mmss) {
+                    const m = parseInt(mmss[1], 10);
+                    const s = parseInt(mmss[2], 10);
+                    if (!isNaN(m) && !isNaN(s)) return (m * 60 + s) * 1000;
+                }
+
+                // Xh Ym Zs or any subset
+                let hours = 0, mins = 0, secs = 0;
+                const hMatch = t.match(/(\d+)\s*h(ours?)?/);
+                const mMatch = t.match(/(\d+)\s*m(in(ute)?s?)?/);
+                const sMatch = t.match(/(\d+)\s*s(ec(ond)?s?)?/);
+                if (hMatch || mMatch || sMatch) {
+                    if (hMatch) hours = parseInt(hMatch[1], 10);
+                    if (mMatch) mins = parseInt(mMatch[1], 10);
+                    if (sMatch) secs = parseInt(sMatch[1], 10);
+                    const total = (hours * 3600 + mins * 60 + secs) * 1000;
+                    if (total > 0) return total;
+                }
+
+                // Plain number = seconds
+                const plain = t.match(/^(\d{1,5})\s*$/);
+                if (plain) {
+                    return parseInt(plain[1], 10) * 1000;
+                }
+
+                return 0;
             }
 
             // VOICE TAP TEMPO - single tap sets tempo immediately
@@ -1409,6 +1766,7 @@
                 const assistant = window.drumAssistant;
                 assistant.logMessage('Ready', 'Click microphone and say "start metronome"');
                 assistant.logMessage('Voice Commands', 'All features controlled by voice only');
+                assistant.logMessage('Timer', 'Say "set timer for 2 minutes" then "start timer"');
             }, 500);
         });
     </script>

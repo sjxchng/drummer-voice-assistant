@@ -209,6 +209,44 @@ class PatternProcessor {
         const raw = (command || '').toString();
         const cmd = normalizeText(raw);
 
+            // QUICK CHECK: If the phrase contains explicit timer/countdown words, handle timer intents first
+            if (/\b(timer|countdown)\b/.test(cmd) || /set\s+(?:a\s+)?(?:timer|countdown)/.test(cmd)) {
+                // TIMER: set duration (e.g., "set timer for 2 minutes", "set a 90 second timer")
+                const setTimerMatch = cmd.match(/set\s+(?:a\s+)?(?:timer|countdown)\s+(?:for\s+)?(.+)/);
+                if (setTimerMatch && setTimerMatch[1]) {
+                    const msCandidate = setTimerMatch[1].trim();
+                    const mmss = msCandidate.match(/^(\d{1,3}):(\d{1,2})$/);
+                    if (mmss) {
+                        const m = parseInt(mmss[1], 10);
+                        const s = parseInt(mmss[2], 10);
+                        const ms = (m * 60 + s) * 1000;
+                        const startNow = /\b(start|kick\s*off|begin|go)\b/.test(cmd);
+                        return { action: 'setTimer', ms, start: startNow };
+                    }
+                    const sMatch = msCandidate.match(/(\d+)\s*s(ec(ond)?s?)?/);
+                    const mMatch = msCandidate.match(/(\d+)\s*m(in(ute)?s?)?/);
+                    if (sMatch) {
+                        const ms = parseInt(sMatch[1], 10) * 1000;
+                        return { action: 'setTimer', ms, start: /\b(start|kick\s*off|begin|go)\b/.test(cmd) };
+                    }
+                    if (mMatch) {
+                        const ms = parseInt(mMatch[1], 10) * 60 * 1000;
+                        return { action: 'setTimer', ms, start: /\b(start|kick\s*off|begin|go)\b/.test(cmd) };
+                    }
+                    const plainNum = parseNumberToken(msCandidate);
+                    if (plainNum) return { action: 'setTimer', ms: plainNum * 1000, start: /\b(start|kick\s*off|begin|go)\b/.test(cmd) };
+                }
+
+                // TIMER controls - start/resume/pause/cancel and synonyms
+                if (/(?:^(?:start|begin|go)\b).*?(?:timer|countdown)?/.test(cmd) || /(?:start|begin)\s+(timer|countdown)/.test(cmd) || /kick\s*off\s*(?:the\s*)?(?:timer|countdown)?/.test(cmd)) {
+                    if (/\b(timer|countdown)\b/.test(cmd) || /kick\s*off/.test(cmd)) return { action: 'startTimer' };
+                }
+                if (/(?:resume|continue)\s+(?:timer|countdown)/.test(cmd) || /resume\s+timer/.test(cmd)) return { action: 'resumeTimer' };
+                if (/(?:pause|hold)\s+(?:timer|countdown)/.test(cmd) || /pause\s+timer/.test(cmd)) return { action: 'pauseTimer' };
+                if (/(?:cancel|stop|clear)\s+(?:timer|countdown)/.test(cmd) || /cancel\s+timer/.test(cmd)) return { action: 'cancelTimer' };
+                if (/how (?:much )?time (?:is )?left/.test(cmd) || /time left/.test(cmd)) return { action: 'timeLeft' };
+            }
+
         // METRONOME - start
         if (/(?:\b(start|play|begin)\b.*\b(metronome|click)\b)/.test(cmd) || /\b(start|play)\b$/.test(cmd)) {
             return { action: 'startMetronome' };
@@ -282,6 +320,44 @@ class PatternProcessor {
         if (/\btap\b/.test(cmd)) {
             return { action: 'tap' };
         }
+
+        // TIMER: set duration (e.g., "set timer for 2 minutes", "set a 90 second timer")
+        const setTimerMatch = cmd.match(/set\s+(?:a\s+)?(?:timer|countdown)\s+(?:for\s+)?(.+)/);
+        if (setTimerMatch && setTimerMatch[1]) {
+            const msCandidate = setTimerMatch[1].trim();
+            // Try to parse numeric tokens like '90s' or '2:00' or word numbers
+            // Simple mm:ss or seconds/minutes parsing - reuse num parsing for plain seconds
+            const mmss = msCandidate.match(/^(\d{1,3}):(\d{1,2})$/);
+            if (mmss) {
+                const m = parseInt(mmss[1], 10);
+                const s = parseInt(mmss[2], 10);
+                const ms = (m * 60 + s) * 1000;
+                const startNow = /\b(start|kick\s*off|begin|go)\b/.test(cmd);
+                return { action: 'setTimer', ms, start: startNow };
+            }
+            const sMatch = msCandidate.match(/(\d+)\s*s(ec(ond)?s?)?/);
+            const mMatch = msCandidate.match(/(\d+)\s*m(in(ute)?s?)?/);
+            if (sMatch) {
+                const ms = parseInt(sMatch[1], 10) * 1000;
+                return { action: 'setTimer', ms, start: /\b(start|kick\s*off|begin|go)\b/.test(cmd) };
+            }
+            if (mMatch) {
+                const ms = parseInt(mMatch[1], 10) * 60 * 1000;
+                return { action: 'setTimer', ms, start: /\b(start|kick\s*off|begin|go)\b/.test(cmd) };
+            }
+            const plainNum = parseNumberToken(msCandidate);
+            if (plainNum) return { action: 'setTimer', ms: plainNum * 1000, start: /\b(start|kick\s*off|begin|go)\b/.test(cmd) };
+        }
+
+        // TIMER controls - start/resume/pause/cancel and synonyms
+        if (/(?:^(?:start|begin|go)\b).*?(?:timer|countdown)?/.test(cmd) || /(?:start|begin)\s+(timer|countdown)/.test(cmd) || /kick\s*off\s*(?:the\s*)?(?:timer|countdown)?/.test(cmd)) {
+            // If explicit mention of timer or countdown is present, treat as start.
+            if (/\b(timer|countdown)\b/.test(cmd) || /kick\s*off/.test(cmd)) return { action: 'startTimer' };
+        }
+        if (/(?:resume|continue)\s+(?:timer|countdown)/.test(cmd) || /resume\s+timer/.test(cmd)) return { action: 'resumeTimer' };
+        if (/(?:pause|hold)\s+(?:timer|countdown)/.test(cmd) || /pause\s+timer/.test(cmd)) return { action: 'pauseTimer' };
+        if (/(?:cancel|stop|clear)\s+(?:timer|countdown)/.test(cmd) || /cancel\s+timer/.test(cmd)) return { action: 'cancelTimer' };
+        if (/how (?:much )?time (?:is )?left/.test(cmd) || /time left/.test(cmd)) return { action: 'timeLeft' };
 
         return { action: 'unknown', command: raw };
     }
