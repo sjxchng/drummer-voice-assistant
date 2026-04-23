@@ -139,17 +139,9 @@
         }
 
         @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            }
-
-            70% {
-                box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-            }
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
         .voice-status {
@@ -163,9 +155,7 @@
             text-align: center;
         }
 
-        .metronome-section {
-            text-align: center;
-        }
+        .metronome-section { text-align: center; }
 
         .metronome-display {
             background: rgba(15, 20, 25, 0.8);
@@ -234,10 +224,7 @@
             text-align: center;
         }
 
-        .tap-count {
-            font-size: 1em;
-            color: #94a3b8;
-        }
+        .tap-count { font-size: 1em; color: #94a3b8; }
 
         .controls {
             display: flex;
@@ -267,7 +254,6 @@
             transform: translateY(-1px);
         }
 
-
         .control-btn.active {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
             border-color: #3b82f6;
@@ -282,9 +268,7 @@
             border: 1px solid rgba(255, 215, 0, 0.1);
         }
 
-        .command-category {
-            margin-bottom: 15px;
-        }
+        .command-category { margin-bottom: 15px; }
 
         .command-category h4 {
             color: #ffd700;
@@ -329,7 +313,6 @@
             border: 1px solid rgba(255, 215, 0, 0.2);
             position: relative;
             min-height: 400px;
-
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -347,10 +330,7 @@
             padding: 40px;
         }
 
-        .pdf-upload-icon {
-            font-size: 4em;
-            opacity: 0.6;
-        }
+        .pdf-upload-icon { font-size: 4em; opacity: 0.6; }
 
         .upload-instruction {
             font-size: 1.3em;
@@ -376,6 +356,8 @@
             font-size: 1em;
             text-align: center;
             box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+            border: none;
         }
 
         #pdfContent {
@@ -421,21 +403,9 @@
             line-height: 1.5;
         }
 
-        .log-timestamp {
-            color: #64748b;
-            font-size: 0.8em;
-        }
-
-        .log-command {
-            color: #fbbf24;
-            margin: 3px 0;
-            font-weight: 500;
-        }
-
-        .log-action {
-            color: #60a5fa;
-            margin: 3px 0;
-        }
+        .log-timestamp { color: #64748b; font-size: 0.8em; }
+        .log-command { color: #fbbf24; margin: 3px 0; font-weight: 500; }
+        .log-action { color: #60a5fa; margin: 3px 0; }
 
         .status-bar {
             background: rgba(15, 20, 25, 0.95);
@@ -483,35 +453,14 @@
             opacity: 0;
         }
 
-        /* Scrollbar Styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 20, 25, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 215, 0, 0.5); }
 
-        ::-webkit-scrollbar-track {
-            background: rgba(15, 20, 25, 0.5);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 215, 0, 0.3);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 215, 0, 0.5);
-        }
-
-        /* Mobile Responsiveness */
         @media (max-width: 1024px) {
-            .main-container {
-                flex-direction: column;
-                gap: 15px;
-            }
-
-            .left-panel {
-                width: 100%;
-            }
+            .main-container { flex-direction: column; gap: 15px; }
+            .left-panel { width: 100%; }
         }
     </style>
 </head>
@@ -524,14 +473,12 @@
 
     <div class="main-container">
         <div class="left-panel">
-            <!-- Voice Control -->
             <div class="voice-control">
                 <h2 class="section-title">Voice Control</h2>
                 <button class="mic-button" id="micButton">🎤</button>
                 <div class="voice-status" id="voiceStatusText">Click microphone to start voice control</div>
             </div>
 
-            <!-- Metronome -->
             <div class="metronome-section">
                 <h2 class="section-title">Metronome</h2>
                 <div class="metronome-display">
@@ -539,21 +486,18 @@
                     <div class="beat-indicator" id="beatIndicator"></div>
                     <div class="subdivision-display" id="subdivisionDisplay">Eighth Notes</div>
                 </div>
-
                 <div class="controls">
                     <button class="control-btn" id="playBtn">▶️ Start</button>
                     <button class="control-btn" id="stopBtn">⏹️ Stop</button>
                 </div>
             </div>
 
-            <!-- Tap Tempo Section -->
             <div class="tap-tempo-section">
                 <h3 class="section-title" style="font-size: 1.1em;">Tap Tempo (by voice)</h3>
                 <div class="tap-indicator" id="tapIndicator">Say "tap" twice with your tempo</div>
                 <div class="tap-count" id="tapCount">Ready for voice tap</div>
             </div>
 
-            <!-- Voice Commands Help -->
             <div class="voice-commands-help">
                 <h3 class="section-title" style="font-size: 1.1em;">Voice Commands</h3>
                 <div class="command-category">
@@ -572,7 +516,6 @@
         </div>
 
         <div class="right-panel">
-            <!-- PDF Viewer -->
             <div class="pdf-section">
                 <h2 class="section-title">Sheet Music</h2>
                 <div class="pdf-controls">
@@ -599,43 +542,10 @@
         </div>
     </div>
 
-    <!-- Console Log -->
     <div class="console-section">
         <div class="console-title">Live Voice Processing Log</div>
         <div id="consoleLog"></div>
     </div>
-
-        <!--
-            Notes (quick reference):
-            - This single-file frontend contains the UI and the client-side logic
-                (class VoiceOnlyDrumAssistant) that listens for voice commands, sends
-                them to the backend (`/api/process-command`), and falls back to local
-                regex parsing if the backend/AI is unavailable.
-
-            - High-level UI pieces:
-                * Left panel: voice controls, metronome display, tap-tempo hints
-                * Right panel: PDF viewer and upload area (uses pdf.js dynamically)
-                * Console section: shows a short, live log of voice processing events
-                * Status bar: shows AI and voice status and last command
-
-            - Data flow (simplified):
-                1. User clicks mic button -> starts Web Speech API recognition
-                2. Recognition result -> `processVoiceCommand(command)`
-                3. `sendToAIBackend(command)` attempts to use backend AI (/api/process-command)
-                     - on success: `normalizeIntent(result)` -> `executeIntent(intent)`
-                     - on failure: `processWithPatterns(command)` -> `executeIntent(intent)`
-
-            - Important DOM elements (by id):
-                * `micButton`, `voiceStatusText` — voice UI controls
-                * `bpmDisplay`, `beatIndicator`, `subdivisionDisplay` — metronome UI
-                * `pdfInput`, `pdfContent`, `currentPage`, `totalPages` — PDF UI
-                * `consoleLog` — live event log
-
-            - Where to look if something breaks:
-                * Browser console (voice API errors, audio context issues)
-                * Server logs (backend AI errors and /api endpoints)
-                * The live console in the UI (helpful event traces)
-        -->
 
     <div class="status-bar">
         <div class="status-indicator">
@@ -652,22 +562,8 @@
     </div>
 
     <script>
-        // VoiceOnlyDrumAssistant
-        // - Handles voice capture (Web Speech API), UI updates (metronome & PDF viewer),
-        //   and coordination between frontend parsing (regex) and backend AI.
-        // - Public properties (important):
-        //   * bpm, subdivision, isPlaying
-        //   * pdfDocument, currentPage, totalPages
-        //   * recognition (SpeechRecognition instance)
-        // - Key methods:
-        //   * setupVoiceRecognition() - initializes Web Speech API and microphone button
-        //   * processVoiceCommand(command) - top-level command handler
-        //   * sendToAIBackend(command) - POSTs to /api/process-command and returns parsed result
-        //   * processWithPatterns(command) - local fallback parser (server also has regex fallback)
-        //   * executeIntent(intent) - applies parsed actions to local UI/state
         class VoiceOnlyDrumAssistant {
             constructor() {
-                // Core state
                 this.bpm = 120;
                 this.subdivision = 'eighth';
                 this.isPlaying = false;
@@ -676,20 +572,17 @@
                 this.beatsPerBar = 4;
                 this.logicalTick = 0;
 
-                // PDF state
                 this.currentPage = 1;
                 this.totalPages = 1;
                 this.pdfDocument = null;
-                this.pageSchedule = null;
 
-                // Tap tempo
+                // FIX: pageSchedule tracks bars interval and last-turned bar count
+                // so we only turn once per N bars, not on every tick after the first turn
+                this.pageSchedule = null; // { bars: N, lastTurnedAtBar: 0 }
+
                 this.tapTimes = [];
-
-                // Voice recognition
                 this.isListening = false;
                 this.recognition = null;
-
-                // Audio context for metronome sound
                 this.audioCtx = null;
 
                 this.initializeElements();
@@ -712,8 +605,6 @@
                 this.voiceStatusTextEl = document.getElementById('voiceStatusText');
                 this.playBtn = document.getElementById('playBtn');
                 this.stopBtn = document.getElementById('stopBtn');
-
-                // Tap tempo elements
                 this.tapIndicator = document.getElementById('tapIndicator');
                 this.tapCount = document.getElementById('tapCount');
             }
@@ -723,11 +614,6 @@
                 this.stopBtn.addEventListener('click', () => this.stopMetronome());
             }
 
-            // setupVoiceRecognition()
-            // - Initializes the Web Speech API (SpeechRecognition).
-            // - Hooks recognition callbacks (.onstart, .onresult, .onerror, .onend)
-            // - Toggles `isListening` and updates `micButton` UI state.
-            // - Listens continuously to allow hands-free commands.
             setupVoiceRecognition() {
                 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SR) {
@@ -777,7 +663,6 @@
                         try {
                             this.recognition.start();
                         } catch (e) {
-                            this.logMessage('Voice Error', 'Recognition restarting...');
                             setTimeout(() => {
                                 if (this.isListening) {
                                     try { this.recognition.start(); } catch (e) { }
@@ -792,7 +677,6 @@
                     }
                 };
 
-                // Microphone button toggle
                 this.micButton.addEventListener('click', () => {
                     if (this.isListening) {
                         this.isListening = false;
@@ -809,26 +693,17 @@
                 });
             }
 
-            // processVoiceCommand(command)
-            // - Top-level handler invoked when speech recognition returns a final transcript.
-            // - Tries AI backend first (async). If that fails, falls back to the local pattern matcher.
-            // - The resolved intent should be an object containing `action` and optional params.
             processVoiceCommand(command) {
-                // Try AI backend first
                 this.sendToAIBackend(command)
                     .then(result => {
                         const intent = this.normalizeIntent(result);
                         this.executeIntent(intent);
                     })
                     .catch(() => {
-                        // Fallback to reliable regex patterns
                         this.processWithPatterns(command);
                     });
             }
 
-            // sendToAIBackend(command) -> Promise<object>
-            // - Posts the command to `/api/process-command` and returns parsed JSON from server.
-            // - On failure (network/500/etc) it throws so callers can fall back to local parsing.
             async sendToAIBackend(command) {
                 try {
                     const response = await fetch('/api/process-command', {
@@ -851,143 +726,75 @@
 
             normalizeIntent(result) {
                 if (!result || typeof result !== 'object') return { action: 'unknown' };
-
-                // Handle different AI response formats
                 if (result.action) return result;
                 if (result.intent) return { action: result.intent, ...result.params };
-
                 return { action: 'unknown' };
             }
 
-            // processWithPatterns(command)
-            // - Local, deterministic fallback used when the backend AI is unavailable.
-            // - Mirrors server-side PatternProcessor behavior but runs in-browser for lower latency.
-            // - If you update server-side regexes, consider keeping these in sync.
             processWithPatterns(command) {
                 this.logMessage('Pattern Matching', 'Processing voice command');
 
-                // METRONOME CONTROL
-                if (/start/i.test(command)) {
-                    return this.executeIntent({ action: 'startMetronome' });
-                }
-                if (/stop/i.test(command)) {
-                    return this.executeIntent({ action: 'stopMetronome' });
-                }
+                if (/start/i.test(command)) return this.executeIntent({ action: 'startMetronome' });
+                if (/stop/i.test(command)) return this.executeIntent({ action: 'stopMetronome' });
 
-                // BPM SETTING - direct numbers or with keywords
                 const bpmMatch = command.match(/(\d{2,3})/);
                 if (bpmMatch) {
                     const bpm = parseInt(bpmMatch[1]);
-                    // Client clamps safe range - mirror server clamp in UI range for consistency
+                    // FIX: clamp to 40-300 matching server
                     if (bpm >= 40 && bpm <= 300) {
-                        return this.executeIntent({ action: 'setBpm', bpm: bpm });
+                        return this.executeIntent({ action: 'setBpm', bpm });
                     }
                 }
 
-                // RELATIVE TEMPO
-                if (/faster/i.test(command)) {
-                    return this.executeIntent({ action: 'adjustBpm', change: 5 });
-                }
-                if (/slower/i.test(command)) {
-                    return this.executeIntent({ action: 'adjustBpm', change: -5 });
-                }
+                if (/faster/i.test(command)) return this.executeIntent({ action: 'adjustBpm', change: 5 });
+                if (/slower/i.test(command)) return this.executeIntent({ action: 'adjustBpm', change: -5 });
 
-                // SUBDIVISIONS
-                if (/quarter/i.test(command)) {
-                    return this.executeIntent({ action: 'setSubdivision', subdivision: 'quarter' });
-                }
-                if (/eighth/i.test(command) || /\b8th\b/i) {
-                    return this.executeIntent({ action: 'setSubdivision', subdivision: 'eighth' });
-                }
-                if (/triplet/i.test(command)) {
-                    return this.executeIntent({ action: 'setSubdivision', subdivision: 'triplet' });
-                }
-                if (/sixteenth/i.test(command) || /\b16th\b/i) {
-                    return this.executeIntent({ action: 'setSubdivision', subdivision: 'sixteenth' });
-                }
+                if (/quarter/i.test(command)) return this.executeIntent({ action: 'setSubdivision', subdivision: 'quarter' });
+                if (/eighth/i.test(command) || /\b8th\b/i.test(command)) return this.executeIntent({ action: 'setSubdivision', subdivision: 'eighth' });
+                if (/triplet/i.test(command)) return this.executeIntent({ action: 'setSubdivision', subdivision: 'triplet' });
+                if (/sixteenth/i.test(command) || /\b16th\b/i.test(command)) return this.executeIntent({ action: 'setSubdivision', subdivision: 'sixteenth' });
 
-                // PAGE NAVIGATION
-                if (/next.*page/i.test(command) || /page.*next/i.test(command)) {
-                    return this.executeIntent({ action: 'nextPage' });
-                }
-                if (/previous.*page/i.test(command) || /page.*previous/i.test(command) || /back/i.test(command)) {
-                    return this.executeIntent({ action: 'previousPage' });
-                }
+                if (/next.*page/i.test(command) || /page.*next/i.test(command)) return this.executeIntent({ action: 'nextPage' });
+                if (/previous.*page/i.test(command) || /page.*previous/i.test(command) || /back/i.test(command)) return this.executeIntent({ action: 'previousPage' });
 
-                // GO TO SPECIFIC PAGE
                 const pageMatch = command.match(/page\s*(\d+)/i);
-                if (pageMatch) {
-                    return this.executeIntent({ action: 'goToPage', page: parseInt(pageMatch[1]) });
-                }
+                if (pageMatch) return this.executeIntent({ action: 'goToPage', page: parseInt(pageMatch[1]) });
 
-                // SCHEDULED PAGE TURNS
-                const scheduleMatch = command.match(/flip.*?(\d+).*?bar/i);
+                // FIX: also match word numbers like "four"
+                const scheduleMatch = command.match(/flip.*?every.*?(\d+|one|two|three|four|five|six|seven|eight).*?bar/i);
                 if (scheduleMatch) {
-                    return this.executeIntent({ action: 'schedulePageTurn', bars: parseInt(scheduleMatch[1]) });
+                    const wordMap = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8 };
+                    const val = scheduleMatch[1];
+                    const bars = /^\d+$/.test(val) ? parseInt(val) : (wordMap[val.toLowerCase()] || null);
+                    if (bars) return this.executeIntent({ action: 'schedulePageTurn', bars });
                 }
 
-                // TAP TEMPO
-                if (/\btap\b/i.test(command)) {
-                    return this.executeIntent({ action: 'tap' });
-                }
+                if (/\btap\b/i.test(command)) return this.executeIntent({ action: 'tap' });
 
                 this.logMessage('Unknown Command', 'Command not recognized');
             }
 
-            // executeIntent(intent)
-            // - Receives a normalized intent object (usually { action, ...params })
-            // - Applies the action to local state (metronome or PDF viewer)
-            // - The client expects these actions and keeps UI in sync with applied changes.
             executeIntent(intent) {
                 this.logMessage('Executing', JSON.stringify(intent));
 
                 switch (intent.action) {
-                    case 'setBpm':
-                        this.setBpm(intent.bpm);
-                        break;
-                    case 'adjustBpm':
-                        this.setBpm(this.bpm + intent.change);
-                        break;
-                    case 'startMetronome':
-                        this.startMetronome();
-                        break;
-                    case 'stopMetronome':
-                        this.stopMetronome();
-                        break;
-                    case 'setSubdivision':
-                        this.setSubdivision(intent.subdivision);
-                        break;
-                    case 'nextPage':
-                        this.nextPage();
-                        break;
-                    case 'previousPage':
-                        this.previousPage();
-                        break;
-                    case 'goToPage':
-                        this.goToPage(intent.page);
-                        break;
-                    case 'schedulePageTurn':
-                        this.schedulePageTurn(intent.bars);
-                        break;
-                    case 'tap':
-                        this.handleVoiceTap();
-                        break;
+                    case 'setBpm': this.setBpm(intent.bpm); break;
+                    case 'adjustBpm': this.setBpm(this.bpm + intent.change); break;
+                    case 'startMetronome': this.startMetronome(); break;
+                    case 'stopMetronome': this.stopMetronome(); break;
+                    case 'setSubdivision': this.setSubdivision(intent.subdivision); break;
+                    case 'nextPage': this.nextPage(); break;
+                    case 'previousPage': this.previousPage(); break;
+                    case 'goToPage': this.goToPage(intent.page); break;
+                    case 'schedulePageTurn': this.schedulePageTurn(intent.bars); break;
+                    case 'tap': this.handleVoiceTap(); break;
                 }
             }
 
-            // CORE METRONOME FUNCTIONS
-            // Metronome lifecycle:
-            // - setBpm(newBpm): adjust tempo, clamps to safe range and restarts metronome if playing.
-            // - setSubdivision(subdivision): change ticks-per-beat multiplier and restart if playing.
-            // - startMetronome(): calculates interval from bpm/subdivision and schedules tick via setInterval.
-            // - stopMetronome(): clears interval and resets UI indicators.
-            // Notes:
-            // - Ticks-per-bar are computed as beatsPerBar * multiplier (multiplier from subdivision)
-            // - For production, a more accurate clock (AudioContext scheduler or WebWorker) is recommended
-            //   to avoid setInterval jitter; setInterval is good enough for prototyping and voice-driven control.
+            // FIX: clamp to 40-300 matching server
             setBpm(newBpm) {
-                if (newBpm < 60) newBpm = 60;
-                if (newBpm > 220) newBpm = 220;
+                if (newBpm < 40) newBpm = 40;
+                if (newBpm > 300) newBpm = 300;
 
                 this.bpm = newBpm;
                 this.bpmDisplay.textContent = this.bpm;
@@ -1025,6 +832,12 @@
                 this.isPlaying = true;
                 this.currentBeat = 0;
                 this.logicalTick = 0;
+
+                // FIX: reset page schedule counter when metronome starts
+                if (this.pageSchedule) {
+                    this.pageSchedule.lastTurnedAtBar = 0;
+                }
+
                 this.ensureAudioContext();
                 this.playBtn.classList.add('active');
 
@@ -1050,8 +863,7 @@
                 this.logMessage('Metronome Stopped', 'Metronome deactivated');
             }
 
-            // TAP TEMPO FUNCTIONALITY
-            // VOICE TAP TEMPO - single tap sets tempo immediately
+            // FIX: handleVoiceTap defined only once (was duplicated before)
             handleVoiceTap() {
                 const now = Date.now();
                 if (this.tapTimes.length === 0) {
@@ -1065,8 +877,9 @@
                 const interval = now - lastTap;
                 const calculatedBpm = Math.round(60000 / interval);
                 let newBpm = calculatedBpm;
-                if (newBpm < 60) newBpm = 60;
-                if (newBpm > 220) newBpm = 220;
+                // FIX: clamp to 40-300
+                if (newBpm < 40) newBpm = 40;
+                if (newBpm > 300) newBpm = 300;
                 this.setBpm(newBpm);
                 this.tapIndicator.textContent = `✅ Tempo set to ${newBpm} BPM from your timing!`;
                 this.tapCount.textContent = `Applied: ${newBpm} BPM`;
@@ -1082,7 +895,6 @@
                 this.currentBeat++;
                 this.logicalTick++;
 
-                // Visual beat indication
                 const multipliers = { quarter: 1, eighth: 2, triplet: 3, sixteenth: 4 };
                 const ticksPerBar = this.beatsPerBar * multipliers[this.subdivision];
                 const isAccent = (this.logicalTick % ticksPerBar) === 1;
@@ -1095,35 +907,33 @@
                     this.beatIndicator.classList.remove('flash', 'accent');
                 }, 150);
 
-                // Audio click
                 this.playClick(isAccent);
 
-                // Handle scheduled page turns
+                // FIX: schedulePageTurn logic
+                // Track which bar we're currently on. Turn only when we cross into a new
+                // bar that is a multiple of pageSchedule.bars AND haven't turned there yet.
                 if (this.pageSchedule) {
-                    const barsComplete = Math.floor(this.logicalTick / ticksPerBar);
-                    if (barsComplete > 0 && (barsComplete % this.pageSchedule.bars) === 0) {
+                    const currentBar = Math.floor(this.logicalTick / ticksPerBar);
+                    if (
+                        currentBar > 0 &&
+                        currentBar % this.pageSchedule.bars === 0 &&
+                        currentBar !== this.pageSchedule.lastTurnedAtBar
+                    ) {
+                        this.pageSchedule.lastTurnedAtBar = currentBar;
                         this.nextPage();
-                        this.logMessage('Auto Page Turn', `Turned after ${this.pageSchedule.bars} bars`);
+                        this.logMessage('Auto Page Turn', `Turned after bar ${currentBar} (every ${this.pageSchedule.bars} bars)`);
                     }
                 }
             }
 
             ensureAudioContext() {
-                // ensureAudioContext()
-                // - Lazily creates an AudioContext used for click sounds.
-                // - Many browsers require a user gesture before audio can play; the code attempts to
-                //   resume suspended contexts automatically.
-                // - If audio initialization fails, the metronome will still run visually but without sound.
                 if (!this.audioCtx) {
                     try {
                         const AudioContext = window.AudioContext || window.webkitAudioContext;
                         this.audioCtx = new AudioContext();
-
-                        // Resume audio context if suspended (required for some browsers)
                         if (this.audioCtx.state === 'suspended') {
                             this.audioCtx.resume();
                         }
-
                         this.logMessage('Audio System', 'Audio context initialized');
                     } catch (error) {
                         this.logMessage('Audio Error', 'Could not initialize audio system');
@@ -1134,7 +944,6 @@
             playClick(accent = false) {
                 this.ensureAudioContext();
                 if (!this.audioCtx || this.audioCtx.state !== 'running') {
-                    // Try to resume if suspended
                     if (this.audioCtx && this.audioCtx.state === 'suspended') {
                         this.audioCtx.resume();
                     }
@@ -1143,84 +952,25 @@
 
                 try {
                     const now = this.audioCtx.currentTime;
-
-                    // Create oscillator for the click sound
                     const osc = this.audioCtx.createOscillator();
                     const gainNode = this.audioCtx.createGain();
-
-                    // Connect audio nodes
                     osc.connect(gainNode);
                     gainNode.connect(this.audioCtx.destination);
-
-                    // Configure sound
                     osc.type = 'sine';
                     osc.frequency.setValueAtTime(accent ? 1000 : 800, now);
-
-                    // Volume envelope for click sound
                     gainNode.gain.setValueAtTime(0, now);
                     gainNode.gain.linearRampToValueAtTime(accent ? 0.3 : 0.2, now + 0.01);
                     gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
-                    // Play the sound
                     osc.start(now);
                     osc.stop(now + 0.1);
-
                 } catch (error) {
                     console.error('Audio playback error:', error);
                 }
             }
 
-            // VOICE TAP TEMPO - single tap sets tempo immediately
-            handleVoiceTap() {
-                const now = Date.now();
-
-                // If this is the first tap, just record it
-                if (this.tapTimes.length === 0) {
-                    this.tapTimes.push(now);
-                    this.tapCount.textContent = 'Say "tap" again to set tempo';
-                    this.tapIndicator.textContent = '🎯 First tap recorded - say "tap" again';
-                    this.logMessage('Voice Tap', 'First tap recorded');
-                    return;
-                }
-
-                // Calculate BPM from the interval between last tap and this one
-                const lastTap = this.tapTimes[this.tapTimes.length - 1];
-                const interval = now - lastTap;
-                const calculatedBpm = Math.round(60000 / interval);
-
-                // Clamp to reasonable range
-                let newBpm = calculatedBpm;
-                if (newBpm < 60) newBpm = 60;
-                if (newBpm > 220) newBpm = 220;
-
-                // Apply the tempo immediately
-                this.setBpm(newBpm);
-
-                // Update display
-                this.tapIndicator.textContent = `✅ Tempo set to ${newBpm} BPM from your timing!`;
-                this.tapCount.textContent = `Applied: ${newBpm} BPM`;
-
-                // Reset for next time
-                this.tapTimes = [];
-
-                setTimeout(() => {
-                    this.tapIndicator.textContent = 'Say "tap" to instantly set tempo from your timing';
-                    this.tapCount.textContent = 'Ready for voice tap';
-                }, 3000);
-
-                this.logMessage('Voice Tap Applied', `Set tempo to ${newBpm} BPM from voice timing`);
-            }
-
-            // PAGE NAVIGATION
-            // PDF handling & page navigation:
-            // - loadPDF(event): reads the File, loads pdf.js if necessary, and caches the PDFDocument.
-            // - renderPage(pageNumber): renders into an offscreen canvas and inserts it into #pdfContent.
-            // - nextPage()/previousPage()/goToPage(n): update `currentPage` and call renderPage.
-            // Notes:
-            // - Uses pdf.js CDN for simplicity; consider bundling a pinned pdf.js version for offline use.
-            // - Rendering uses a scale factor (2.0) for high-res images; adjust for performance on low-end devices.
+            // FIX: schedulePageTurn now initializes lastTurnedAtBar tracking
             schedulePageTurn(bars) {
-                this.pageSchedule = { bars };
+                this.pageSchedule = { bars, lastTurnedAtBar: 0 };
                 this.logMessage('Page Schedule', `Will auto-turn every ${bars} bars`);
             }
 
@@ -1228,9 +978,7 @@
                 if (pageNumber >= 1 && pageNumber <= this.totalPages) {
                     this.currentPage = pageNumber;
                     this.currentPageEl.textContent = this.currentPage;
-                    if (this.pdfDocument) {
-                        this.renderPage(this.currentPage);
-                    }
+                    if (this.pdfDocument) this.renderPage(this.currentPage);
                     this.logMessage('Page Jump', `Jumped to page ${this.currentPage}`);
                 } else {
                     this.logMessage('Page Error', `Page ${pageNumber} doesn't exist`);
@@ -1241,9 +989,7 @@
                 if (this.currentPage < this.totalPages) {
                     this.currentPage++;
                     this.currentPageEl.textContent = this.currentPage;
-                    if (this.pdfDocument) {
-                        this.renderPage(this.currentPage);
-                    }
+                    if (this.pdfDocument) this.renderPage(this.currentPage);
                     this.logMessage('Page Turn', `Next → Page ${this.currentPage}`);
                 } else {
                     this.logMessage('Page Limit', 'Already on last page');
@@ -1254,16 +1000,13 @@
                 if (this.currentPage > 1) {
                     this.currentPage--;
                     this.currentPageEl.textContent = this.currentPage;
-                    if (this.pdfDocument) {
-                        this.renderPage(this.currentPage);
-                    }
+                    if (this.pdfDocument) this.renderPage(this.currentPage);
                     this.logMessage('Page Turn', `Previous → Page ${this.currentPage}`);
                 } else {
                     this.logMessage('Page Limit', 'Already on first page');
                 }
             }
 
-            // PDF HANDLING
             async loadPDF(event) {
                 const file = event.target.files[0];
                 if (!file || file.type !== 'application/pdf') {
@@ -1274,9 +1017,7 @@
                 this.logMessage('PDF Loading', `Loading: ${file.name}`);
 
                 try {
-                    if (typeof pdfjsLib === 'undefined') {
-                        await this.loadPDFLibrary();
-                    }
+                    if (typeof pdfjsLib === 'undefined') await this.loadPDFLibrary();
 
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -1290,7 +1031,6 @@
 
                     await this.renderPage(this.currentPage);
                     this.logMessage('PDF Loaded', `${this.totalPages} pages ready for voice control`);
-
                 } catch (error) {
                     console.error('PDF loading error:', error);
                     this.logMessage('PDF Error', 'Failed to load PDF - try a different file');
@@ -1299,11 +1039,7 @@
 
             async loadPDFLibrary() {
                 return new Promise((resolve, reject) => {
-                    if (typeof pdfjsLib !== 'undefined') {
-                        resolve();
-                        return;
-                    }
-
+                    if (typeof pdfjsLib !== 'undefined') { resolve(); return; }
                     const script = document.createElement('script');
                     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
                     script.onload = () => {
@@ -1320,7 +1056,7 @@
 
                 try {
                     const page = await this.pdfDocument.getPage(pageNumber);
-                    const scale = 2.0; // Higher quality rendering
+                    const scale = 2.0;
                     const viewport = page.getViewport({ scale });
 
                     let canvas = document.getElementById('pdfCanvas');
@@ -1335,7 +1071,6 @@
                             background: white;
                             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
                         `;
-
                         const pdfContent = document.getElementById('pdfContent');
                         pdfContent.innerHTML = '';
                         pdfContent.appendChild(canvas);
@@ -1349,26 +1084,16 @@
                             height: 100%;
                             background: #ffffff;
                         `;
-
-                        // Hide the upload area completely when PDF is loaded
                         const uploadArea = document.querySelector('.pdf-upload-area');
-                        if (uploadArea && uploadArea !== pdfContent.parentElement) {
-                            uploadArea.style.display = 'none';
-                        }
+                        if (uploadArea) uploadArea.style.display = 'none';
                     }
 
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
 
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-
-                    await page.render(renderContext).promise;
+                    await page.render({ canvasContext: context, viewport }).promise;
                     this.logMessage('Page Rendered', `Displaying page ${pageNumber}`);
-
                 } catch (error) {
                     console.error('Page rendering error:', error);
                     this.logMessage('Render Error', `Could not display page ${pageNumber}`);
@@ -1384,27 +1109,21 @@
                     <div class="log-command">${category}</div>
                     <div class="log-action">${message}</div>
                 `;
-
                 this.consoleLog.appendChild(logEntry);
                 this.consoleLog.scrollTop = this.consoleLog.scrollHeight;
-
-                // Prevent console from getting too long
                 while (this.consoleLog.children.length > 30) {
                     this.consoleLog.removeChild(this.consoleLog.firstChild);
                 }
             }
         }
 
-        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
             window.drumAssistant = new VoiceOnlyDrumAssistant();
 
-            // Set up PDF file input handler
             document.getElementById('pdfInput').addEventListener('change', (event) => {
                 window.drumAssistant.loadPDF(event);
             });
 
-            // Add some helpful startup messages
             setTimeout(() => {
                 const assistant = window.drumAssistant;
                 assistant.logMessage('Ready', 'Click microphone and say "start metronome"');
