@@ -1,65 +1,92 @@
-DrumVoice — Voice-Only Assistant for Drummers
+# DrumVoice: Voice-Only Assistant for Drummers
 
-Overview
+## Overview
 
-DrumVoice is a small web app (frontend in `public/`) plus an Express backend (`server.js`) that accepts natural-language voice commands and translates them into structured actions for a metronome and PDF page-turning.
+DrumVoice is a web app for drummers whose hands and feet are occupied while playing. It accepts natural-language voice commands and translates them into structured actions for a metronome and PDF sheet music viewer.
 
-Key features
+## Key Features
 
-- Voice command parsing with an AI provider (Cohere) and a deterministic regex fallback.
-- Metronome controls (start/stop, set BPM, subdivisions).
-- PDF viewer with voice-controlled page navigation and scheduled page turns.
-- Developer-friendly `/api/info` endpoint that reports server metadata for debugging and explanation.
+- Voice command parsing via Google Gemini (free tier) with a deterministic regex fallback
+- Metronome controls: start/stop, set BPM, relative tempo adjustment, subdivisions, tap tempo
+- Two-page spread view for sheet music with voice-controlled navigation and scheduled automatic page turns
+- Graceful degradation — works fully offline via regex if the AI provider is unavailable
 
-Files of interest
+## Project Structure
 
-- `server.js` — Express server. Endpoints:
-  - `POST /api/process-command` — Accepts { command: string } and returns a parsed intent.
-  - `POST /api/test` — Returns both AI and pattern parser outputs for a given command (useful for debugging).
-  - `GET /api/health` — Basic health check with uptime and whether a Cohere key is configured.
-  - `GET /api/info` — New informational endpoint that returns package metadata, routes, start time, uptime, node version, and whether a Cohere API key is present.
-  - `GET /` — Serves `public/index.html`.
+```
+drumvoice/
+├── server.js              # Entry point — starts the server
+├── public/
+│   └── index.html         # Frontend UI and client-side voice logic
+└── src/
+    ├── app.js             # Express setup, middleware, routes
+    ├── routes/
+    │   └── commands.js    # All /api endpoints
+    ├── providers/
+    │   ├── base.js        # Abstract AIProvider base class
+    │   ├── gemini.js      # GeminiProvider (Gemini 2.0 Flash, free tier)
+    │   └── index.js       # Provider factory
+    └── parser/
+        ├── normalizer.js       # Text normalization and number parsing utilities
+        └── PatternProcessor.js # Regex fallback parser
+```
 
-- `public/index.html` — Frontend UI + client-side logic (`VoiceOnlyDrumAssistant`) that:
-  - Captures voice via Web Speech API.
-  - Sends recognized phrases to `/api/process-command`.
-  - Falls back to local regex parsing when the server or AI is unavailable.
-  - Controls metronome audio, PDF rendering (using pdf.js), and live console logs in the UI.
+## Setup
 
-How to run locally
-
-1. Install dependencies
-
-   Use your terminal (zsh):
-
+1. **Install dependencies**
+   ```bash
    npm install
+   ```
 
-2. Configure (optional)
+2. **Configure environment**
+   ```bash
+   cp .env.example .env
+   ```
+   Add your Gemini API key to `.env`:
+   ```
+   GEMINI_API_KEY=your_key_here
+   ```
+   Get a free key at [aistudio.google.com](https://aistudio.google.com). If no key is set, the app still runs using the regex fallback.
 
-   If you want AI parsing via Cohere, add a `.env` file with:
-
-   COHERE_API_KEY=your_cohere_api_key_here
-
-   If no key is present, the server will still run and the frontend will fall back to regex parsing.
-
-3. Start the server
-
+3. **Start the server**
+   ```bash
    npm start
+   ```
 
-4. Open the frontend
+4. **Open the app**
 
-   Visit http://localhost:3000 in a Chromium-based browser (Chrome or Edge recommended for the Web Speech API).
+   Visit `http://localhost:3000` in Chrome or Edge (required for Web Speech API).
 
-Useful debugging
+## API Endpoints
 
-- Visit `http://localhost:3000/api/info` to see runtime metadata and which routes are available.
-- Visit `http://localhost:3000/api/test` and POST JSON { "command": "120" } to compare AI vs pattern parsing.
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/process-command` | Parse a voice command — tries AI first, falls back to regex |
+| `POST` | `/api/test` | Returns both AI and regex outputs side by side (debugging) |
+| `GET`  | `/api/health` | Health check with uptime and provider status |
+| `GET`  | `/api/info` | Server metadata, routes, node version |
 
-Notes & next steps
+## Voice Commands
 
-- The server logs incoming requests and prints package/version/start time on startup. This provides a quick explanation of what is running and why.
-- Consider adding unit tests for the `PatternProcessor` logic and CI checks for linting.
+| Command | Action |
+|---------|--------|
+| "start" / "stop" | Start or stop metronome |
+| "120" | Set BPM to 120 |
+| "faster" / "slower" | Adjust BPM by ±5 |
+| "faster by 10" | Adjust BPM by a specific amount |
+| "eighth notes" / "quarter notes" | Set subdivision |
+| "tap" (twice) | Set tempo from voice timing |
+| "next page" / "previous page" | Navigate sheet music (advances by spread) |
+| "go to page 3" | Jump to a specific page |
+| "flip every 4 bars" | Schedule automatic page turns |
 
-License
+## Adding a New AI Provider
+
+1. Create `src/providers/yourprovider.js` extending `AIProvider` from `base.js`
+2. Implement `async processCommand(command)` — return a structured intent object
+3. Add a case for it in `src/providers/index.js`
+4. Set `AI_PROVIDER=yourprovider` in `.env`
+
+## License
 
 MIT
